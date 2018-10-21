@@ -79,7 +79,7 @@ def parse_args():
 
     parser.add_argument('sploit',
                         help="Sploit executable (should take a victim's host as the first argument)")
-    parser.add_argument('--server-url', metavar='URL', default='http://farm.kolambda.com:5000',
+    parser.add_argument('--server-url', metavar='URL', default='http://localhost:5000',
                         help='Server URL')
     parser.add_argument('--interpreter', metavar='COMMAND',
                         help='Explicitly specify sploit interpreter (use on Windows, which doesn\'t '
