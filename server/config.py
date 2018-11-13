@@ -3,8 +3,10 @@ CONFIG = {
 
     # The clients will run sploits on TEAMS and
     # fetch FLAG_FORMAT from sploits' stdout.
-    'TEAMS': {'Team #{}'.format(i): '10.0.0.{}'.format(i)
-              for i in range(1, 29 + 1)},
+    'TEAMS': {'Team #{}'.format(i): '10.23.{}.3'.format(i % 256)
+              for i in range(1, 13) if i != 1},
+    # 'TEAMS': {'Team #{}'.format(i): '10.23.{}.3'.format(i % 256)
+    #           for i in range(1, 12) if i == 1},
     'FLAG_FORMAT': r'[A-Z0-9]{31}=',
 
     # This configures how and where to submit flags.
@@ -12,11 +14,11 @@ CONFIG = {
     # RuCTF(E) and VolgaCTF checksystems are supported out-of-the-box.
 
     'SYSTEM_PROTOCOL': 'ructf_tcp',
-    'SYSTEM_HOST': '127.0.0.1',
+    'SYSTEM_HOST': 'flags.ructfe.org',
     'SYSTEM_PORT': 31337,
 
-    # 'SYSTEM_PROTOCOL': 'ructf_http',
-    # 'SYSTEM_URL': 'http://monitor.ructfe.org/flags',
+    # 'SYSTEM_PROTOCOL': 'mctf_http',
+    # 'SYSTEM_URL': 'http://10.23.0.7:8000',
     # 'SYSTEM_TOKEN': 'your_secret_token',
 
     # 'SYSTEM_PROTOCOL': 'volgactf',
@@ -25,8 +27,8 @@ CONFIG = {
     # The server will submit not more than SUBMIT_FLAG_LIMIT flags
     # every SUBMIT_PERIOD seconds. Flags received more than
     # FLAG_LIFETIME seconds ago will be skipped.
-    'SUBMIT_FLAG_LIMIT': 50,
-    'SUBMIT_PERIOD': 5,
+    'SUBMIT_FLAG_LIMIT': 100,
+    'SUBMIT_PERIOD': 2,
     'FLAG_LIFETIME': 5 * 60,
 
     # Password for the web interface. This key will be excluded from config

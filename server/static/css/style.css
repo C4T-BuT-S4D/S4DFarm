@@ -20,6 +20,14 @@ textarea {
     resize: none;
 }
 
+.bg-dark {
+    background-color: #333333 !important;
+}
+
+.page-link {
+    background-color: #333333 !important;
+}
+
 #text-with-flags {
     height: 80px;
 }
