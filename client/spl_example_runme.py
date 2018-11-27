@@ -6,6 +6,17 @@
 import random
 import sys
 
+REDIS_HOST = '127.0.0.1'
+REDIS_PORT = 6379
+REDIS_DB = 2
+
+try:
+    import redis
+
+    cache = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB)
+except ImportError:
+    print('Redis is not installed, so you won\'t be able to use script caching')
+
 print("Hello! I am a little sploit. I could be written on any language, but "
       "my author loves Python. Look at my source - it is really simple. "
       "I should steal flags and print them on stdout or stderr. ")

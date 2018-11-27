@@ -89,7 +89,7 @@ def parse_args():
                         help='Maximal number of concurrent sploit instances. '
                              'Too little value will make time limits for sploits smaller, '
                              'too big will eat all RAM on your computer')
-    parser.add_argument('--attack-period', metavar='N', type=float, default=120,
+    parser.add_argument('--attack-period', metavar='N', type=float, default=55,
                         help='Rerun the sploit on all teams each N seconds '
                              'Too little value will make time limits for sploits smaller, '
                              'too big will miss flags from some rounds')
