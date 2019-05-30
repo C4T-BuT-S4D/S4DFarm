@@ -4,9 +4,18 @@ from server import app
 from server.models import FlagStatus, SubmitResult
 
 RESPONSES = {
-    FlagStatus.QUEUED: ['timeout', 'game not started', 'try again later', 'game over', 'is not up',
-                        'no such flag'],
-    FlagStatus.ACCEPTED: ['accepted', 'congrat'],
+    FlagStatus.QUEUED: [
+        'timeout',
+        'game not started',
+        'try again later',
+        'game over',
+        'is not up',
+        'no such flag',
+    ],
+    FlagStatus.ACCEPTED: [
+        'accepted',
+        'congrat',
+    ],
     FlagStatus.REJECTED: (
             [
                 'bad',
@@ -24,6 +33,7 @@ RESPONSES = {
                 'already_submitted',
                 'team_not_found',
                 'too_old',
+                'stolen',
             ]
     ),
 }
@@ -56,8 +66,13 @@ def submit_flags(flags, config):
     sock = socket.create_connection((config['SYSTEM_HOST'], config['SYSTEM_PORT']),
                                     READ_TIMEOUT)
     greeting = recvall(sock)
-    if b'Please enter flags' not in greeting:
+    if b'Welcome' not in greeting:
         raise Exception('Checksystem does not greet us: {}'.format(greeting))
+
+    sock.sendall(config['TEAM_TOKEN'].encode() + b'\n')
+    invite = recvall(sock)
+    if b'enter your flags' not in invite:
+        raise Exception('Team token seems to be invalid: {}'.format(greeting))
 
     unknown_responses = set()
     for item in flags:
