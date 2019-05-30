@@ -11,14 +11,13 @@ import re
 import stat
 import subprocess
 import sys
-import time
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from math import ceil
 from urllib.parse import urljoin
 from urllib.request import Request, urlopen
-
 
 if sys.version_info < (3, 4):
     logging.critical('Support of Python < 3.4 is not implemented yet')
@@ -96,6 +95,9 @@ def parse_args():
 
     parser.add_argument('-v', '--verbose-attacks', metavar='N', type=int, default=1,
                         help="Sploits' outputs and found flags will be shown for the N first attacks")
+
+    parser.add_argument('-e', '--endless', default=False, action='store_true',
+                        help="Run sploits without timeouts")
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--not-per-team', action='store_true',
@@ -543,7 +545,11 @@ def main(args):
         print()
         logging.info('Launching an attack #{}'.format(attack_no))
 
-        max_runtime = args.attack_period / ceil(len(teams) / args.pool_size)
+        max_runtime = None
+
+        if not args.endless:
+            max_runtime = args.attack_period / ceil(len(teams) / args.pool_size)
+
         show_time_limit_info(args, config, max_runtime, attack_no)
 
         for team_name, team_addr in teams.items():
