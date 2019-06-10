@@ -1,3 +1,6 @@
+from volgactf.final.capsule_api import CapsuleAPIHelper, GetPublicKeyResult, DecodeResult
+
+
 def generate_spam_flag():
     import base64, hashlib, os, re
     encode = lambda s: re.sub(r'[a-z/+=\n]', r'', base64.encodebytes(s).decode()).upper()
@@ -19,18 +22,35 @@ def is_spam_flag(flag):
 
 
 def test():
-    import base64, hashlib, os, re
+    import base64, os, re
     encode = lambda s: re.sub(r'[a-z/+=\n]', r'', base64.encodebytes(s).decode()).upper()
-    for i in range(10**4):
+    for i in range(10 ** 4):
         flag = encode(os.urandom(128))[:31] + '='
         if i < 30:
             print(flag)
         assert not is_spam_flag(flag)
 
-    for i in range(10**3):
+    for i in range(10 ** 3):
         assert is_spam_flag(generate_spam_flag())
 
     print('Ok')
+
+
+def get_valid_jwt_flags(models):
+    cap_helper = CapsuleAPIHelper('2019.ctf.moscow')
+
+    pubkey = cap_helper.get_public_key()
+    if pubkey['code'] != GetPublicKeyResult.SUCCESS:
+        raise ValueError
+
+    result = []
+    for model in models:
+        cur = model
+        decoded_flag = cap_helper.decode(cur['flag'][11:-1])
+        if decoded_flag['code'] != DecodeResult.SUCCESS:
+            raise ValueError
+        cur['flag'] = decoded_flag['decoded']['flag']
+        result.append(cur)
 
 
 if __name__ == '__main__':

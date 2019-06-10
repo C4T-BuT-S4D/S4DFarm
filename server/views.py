@@ -89,6 +89,12 @@ def post_flags_manual():
     config = reloader.get_config()
     flags = re.findall(config['FLAG_FORMAT'], request.form['text'])
 
+    # if config.get('VOLGA_FORMAT'):
+    #     cap_helper.get_public_key()
+    #     flags = [cap_helper.decode(flag[11:-1]) for flag in flags]
+    #     flags = [flag['decoded']['flag'] for flag in flags
+    #              if flag['code'] == DecodeResult.SUCCESS]
+
     cur_time = round(time.time())
     rows = [(item, 'Manual', '*', cur_time, FlagStatus.QUEUED.name)
             for item in flags]
