@@ -1,7 +1,0 @@
-version: '2.2'
-
-services:
-  farm_redis:
-    image: redis
-    ports:
-      - "6378:6379"

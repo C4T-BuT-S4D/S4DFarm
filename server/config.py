@@ -4,7 +4,7 @@ CONFIG = {
     # The clients will run sploits on TEAMS and
     # fetch FLAG_FORMAT from sploits' stdout.
     'TEAMS': {'Team #{}'.format(i): '172.29.{}.3'.format(i % 256)
-              for i in range(1, 10) if i != 8},
+              for i in range(1, 3) if i != 8},
     # 'FLAG_FORMAT': r'CTF\.Moscow\{[a-zA-Z\.0-9_-]+\}',
     'FLAG_FORMAT': r'[A-Z0-9]{31}=',
 
@@ -35,5 +35,5 @@ CONFIG = {
     # Password for the web interface. This key will be excluded from config
     # before sending it to farm clients.
     # ########## DO NOT FORGET TO CHANGE IT ##########
-    'SERVER_PASSWORD': '1234',
+    'SERVER_PASSWORD': 'c4tbs',
 }

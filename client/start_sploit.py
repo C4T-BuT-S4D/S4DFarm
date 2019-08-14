@@ -27,13 +27,14 @@ os_windows = (os.name == 'nt')
 
 
 HEADER = '''
- _____  _                 _                   _____                                  _        
-/  ___|| |               | |                 /  ___|                                | |       
-\ `--. | |__    __ _   __| |  ___ __      __ \ `--.   ___  _ __ __   __ __ _  _ __  | |_  ___ 
- `--. \| '_ \  / _` | / _` | / _ \\\\ \ /\ / /  `--. \ / _ \| '__|\ \ / // _` || '_ \ | __|/ __|
-/\__/ /| | | || (_| || (_| || (_) |\ V  V /  /\__/ /|  __/| |    \ V /| (_| || | | || |_ \__ \\
-\____/ |_| |_| \__,_| \__,_| \___/  \_/\_/   \____/  \___||_|     \_/  \__,_||_| |_| \__||___/
-                                                                                              
+
+ ██████╗██╗  ██╗████████╗    ██████╗ ██╗   ██╗████████╗    ███████╗██╗  ██╗██████╗ 
+██╔════╝██║  ██║╚══██╔══╝    ██╔══██╗██║   ██║╚══██╔══╝    ██╔════╝██║  ██║██╔══██╗
+██║     ███████║   ██║       ██████╔╝██║   ██║   ██║       ███████╗███████║██║  ██║
+██║     ╚════██║   ██║       ██╔══██╗██║   ██║   ██║       ╚════██║╚════██║██║  ██║
+╚██████╗     ██║   ██║       ██████╔╝╚██████╔╝   ██║       ███████║     ██║██████╔╝
+ ╚═════╝     ╚═╝   ╚═╝       ╚═════╝  ╚═════╝    ╚═╝       ╚══════╝     ╚═╝╚═════╝ 
+                                                                                                                                                                             
 '''[1:]
 
 
@@ -349,10 +350,13 @@ def process_sploit_output(stream, args, team_name, flag_format, attack_no):
         output_lines = []
         instance_flags = set()
 
+        line_cnt = 1
+
         while True:
             line = stream.readline()
             if not line:
                 break
+
             line = line.decode(errors='replace')
             output_lines.append(line)
 
@@ -360,6 +364,16 @@ def process_sploit_output(stream, args, team_name, flag_format, attack_no):
             if line_flags:
                 flag_storage.add(line_flags, team_name)
                 instance_flags |= line_flags
+
+            if args.endless and line_cnt <= args.verbose_attacks * 5:
+                line_cnt += 1
+                display_sploit_output(team_name, output_lines)
+                output_lines = []
+                if instance_flags:
+                    logging.info('Got {} flags from "{}": {}'.format(
+                        len(instance_flags), team_name, instance_flags))
+                    instance_flags = set()
+
 
         if attack_no <= args.verbose_attacks and not exit_event.is_set():
             # We don't want to spam the terminal on KeyboardInterrupt
@@ -480,7 +494,11 @@ def show_time_limit_info(args, config, max_runtime, attack_no):
                             "otherwise the sploit will not have time "
                             "to catch flags for each round before their expiration".format(min_attack_period))
 
-    logging.info('Time limit for a sploit instance: {:.1f} sec'.format(max_runtime))
+    if max_runtime is not None:
+        logging.info('Time limit for a sploit instance: {:.1f} sec'.format(max_runtime))
+    else:
+        logging.info('Time limit for a sploit instance: endless')
+
     with instance_lock:
         if instance_storage.n_completed > 0:
             # TODO: Maybe better for 10 last attacks
@@ -493,7 +511,7 @@ PRINTED_TEAM_NAMES = 5
 
 def get_target_teams(args, teams, attack_no):
     if args.not_per_team:
-        return {'*': None}
+        teams = {'*': '*'}
 
     if args.distribute is not None:
         k, n = args.distribute
@@ -527,6 +545,13 @@ def main(args):
 
     config = flag_format = None
     pool = ThreadPoolExecutor(max_workers=args.pool_size)
+
+    if args.endless:
+        print()
+        for warn in range(5):
+            logging.warning("Be careful! We won't restart your sploit if it fails")
+        print()
+
     for attack_no in once_in_a_period(args.attack_period):
         try:
             config = get_config(args)
@@ -542,24 +567,26 @@ def main(args):
                 return
             continue
 
-        print()
-        logging.info('Launching an attack #{}'.format(attack_no))
-
         max_runtime = None
 
         if not args.endless:
             max_runtime = args.attack_period / ceil(len(teams) / args.pool_size)
 
-        show_time_limit_info(args, config, max_runtime, attack_no)
+        if not args.endless or attack_no == 1:
 
-        for team_name, team_addr in teams.items():
-            pool.submit(run_sploit, args, team_name, team_addr, attack_no, max_runtime, flag_format)
+            print()
+            logging.info('Launching an attack #{}'.format(attack_no))
+
+            show_time_limit_info(args, config, max_runtime, attack_no)
+
+            for team_name, team_addr in teams.items():
+                pool.submit(run_sploit, args, team_name, team_addr, attack_no, max_runtime, flag_format)
 
 
 def shutdown():
     # Stop run_post_loop thread
     exit_event.set()
-    # Kill all child processes (so consume_sploit_ouput and run_sploit also will stop)
+    # Kill all child processes (so consume_sploit_output and run_sploit also will stop)
     with instance_lock:
         for proc in instance_storage.instances.values():
             proc.kill()
