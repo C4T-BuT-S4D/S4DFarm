@@ -19,6 +19,8 @@ try:
 except ImportError:
     print('Redis is not installed, so you won\'t be able to use script caching')
 
+ip = sys.argv[1]
+
 print("Hello! I am a little sploit. I could be written on any language, but "
       "my author loves Python. Look at my source - it is really simple. "
       "I should steal flags and print them on stdout or stderr. ")
