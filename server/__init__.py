@@ -28,5 +28,3 @@ if not serving.is_running_from_reloader():
 
     signal.signal(signal.SIGINT, close_submit_loop_thread)
     submit_loop_thread.start()
-    
-    print("exited 1")

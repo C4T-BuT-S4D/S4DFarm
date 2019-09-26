@@ -97,8 +97,6 @@ class SubmitThread(threading.Thread):
 
         app.logger.info('Stopped submit loop')
 
-        print("exited 2")
-
     def join(self, timeout=None):
         self.is_active = False
         super(SubmitThread, self).join(timeout=timeout)
