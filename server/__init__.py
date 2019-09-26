@@ -19,13 +19,14 @@ import server.submit_loop
 import server.views
 
 if not serving.is_running_from_reloader():
-    app.logger.info('Not reloader')
+    app.logger.info('Not running from reloader')
     submit_loop_thread = submit_loop.SubmitThread()
 
     def close_submit_loop_thread(signum, frame):
         app.logger.info('Trying to stop submit loop')
         submit_loop_thread.is_active = False
 
-    monkey.patch_all()
     signal.signal(signal.SIGINT, close_submit_loop_thread)
     submit_loop_thread.start()
+    
+    print("exited 1")

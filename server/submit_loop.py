@@ -95,7 +95,9 @@ class SubmitThread(threading.Thread):
             if config['SUBMIT_PERIOD'] > submit_spent:
                 time.sleep(config['SUBMIT_PERIOD'] - submit_spent)
 
-        app.logger.info('Stopping submit loop')
+        app.logger.info('Stopped submit loop')
+
+        print("exited 2")
 
     def join(self, timeout=None):
         self.is_active = False

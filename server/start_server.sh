@@ -1,5 +1,3 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# Use FLASK_DEBUG=True if needed
-
-FLASK_APP=__init__.py flask run --host 0.0.0.0 --with-threads
+gunicorn --worker-class gevent --worker-connections 768 --bind 0.0.0.0:5001 --timeout 120 --reload server:app
