@@ -3,8 +3,8 @@ CONFIG = {
 
     # The clients will run sploits on TEAMS and
     # fetch FLAG_FORMAT from sploits' stdout.
-    'TEAMS': {'Team #{}'.format(i): '172.29.{}.3'.format(i % 256)
-              for i in range(1, 10) if i != 8},
+    'TEAMS': {'Team #{}'.format(i): '10.70.{}.2'.format(i % 256)
+              for i in range(1, 7) if i != 1},
     # 'FLAG_FORMAT': r'CTF\.Moscow\{[a-zA-Z\.0-9_-]+\}',
     'FLAG_FORMAT': r'[A-Z0-9]{31}=',
 
@@ -12,9 +12,10 @@ CONFIG = {
     # The protocol must be a module in protocols/ directory.
     # RuCTF(E) and VolgaCTF checksystems are supported out-of-the-box.
 
-    'SYSTEM_PROTOCOL': 'ructf_tcp',
-    'SYSTEM_HOST': '10.0.0.1',
+    'SYSTEM_PROTOCOL': 'forcad_tcp',
+    'SYSTEM_HOST': '10.10.10.10',
     'SYSTEM_PORT': 31337,
+    'TEAM_TOKEN': 'c425c02bf4c80540',
 
 
     # 'SYSTEM_PROTOCOL': 'mctf_http',

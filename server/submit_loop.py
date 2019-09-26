@@ -1,6 +1,6 @@
-import threading
 import importlib
 import random
+import threading
 import time
 from collections import defaultdict
 
@@ -95,7 +95,7 @@ class SubmitThread(threading.Thread):
             if config['SUBMIT_PERIOD'] > submit_spent:
                 time.sleep(config['SUBMIT_PERIOD'] - submit_spent)
 
-        app.logger.info('Stopping submit loop')
+        app.logger.info('Stopped submit loop')
 
     def join(self, timeout=None):
         self.is_active = False
