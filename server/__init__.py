@@ -21,7 +21,8 @@ if not serving.is_running_from_reloader():
     app.logger.info('Not running from reloader')
     submit_loop_thread = submit_loop.SubmitThread()
 
-    def close_submit_loop_thread(signum, frame):
+
+    def close_submit_loop_thread(_signum, _frame):
         app.logger.info('Trying to stop submit loop')
         submit_loop_thread.is_active = False
 

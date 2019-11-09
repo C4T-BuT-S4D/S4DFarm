@@ -25,7 +25,6 @@ if sys.version_info < (3, 4):
 
 os_windows = (os.name == 'nt')
 
-
 HEADER = '''
 
  ██████╗██╗  ██╗████████╗    ██████╗ ██╗   ██╗████████╗    ███████╗██╗  ██╗██████╗ 
@@ -58,6 +57,8 @@ class Style(Enum):
 
 BRIGHT_COLORS = [Style.FG_RED, Style.FG_GREEN, Style.FG_BLUE,
                  Style.FG_MAGENTA, Style.FG_CYAN]
+
+VERBOSE_LINES = 5
 
 
 def highlight(text, style=None):
@@ -206,10 +207,12 @@ if os_windows:
 
     win_ignore_ctrl_c = PHANDLER_ROUTINE()  # = NULL
 
+
     def _errcheck_bool(result, _, args):
         if not result:
             raise ctypes.WinError(ctypes.get_last_error())
         return args
+
 
     # BOOL WINAPI SetConsoleCtrlHandler(
     #   _In_opt_ PHANDLER_ROUTINE HandlerRoutine,
@@ -218,12 +221,14 @@ if os_windows:
     kernel32.SetConsoleCtrlHandler.errcheck = _errcheck_bool
     kernel32.SetConsoleCtrlHandler.argtypes = (PHANDLER_ROUTINE, wintypes.BOOL)
 
+
     @PHANDLER_ROUTINE
     def win_ctrl_handler(dwCtrlType):
         if dwCtrlType == signal.CTRL_C_EVENT:
             kernel32.SetConsoleCtrlHandler(win_ignore_ctrl_c, True)
             shutdown()
         return False
+
 
     kernel32.SetConsoleCtrlHandler(win_ctrl_handler, True)
 
@@ -306,9 +311,10 @@ class FlagStorage:
 
 flag_storage = FlagStorage()
 
-
 POST_PERIOD = 5
 POST_FLAG_LIMIT = 10000
+
+
 # TODO: test that 10k flags won't lead to the hangup of the farm server
 
 
@@ -365,7 +371,7 @@ def process_sploit_output(stream, args, team_name, flag_format, attack_no):
                 flag_storage.add(line_flags, team_name)
                 instance_flags |= line_flags
 
-            if args.endless and line_cnt <= args.verbose_attacks * 5:
+            if args.endless and line_cnt <= args.verbose_attacks * VERBOSE_LINES:
                 line_cnt += 1
                 display_sploit_output(team_name, output_lines)
                 output_lines = []
@@ -373,7 +379,6 @@ def process_sploit_output(stream, args, team_name, flag_format, attack_no):
                     logging.info('Got {} flags from "{}": {}'.format(
                         len(instance_flags), team_name, instance_flags))
                     instance_flags = set()
-
 
         if attack_no <= args.verbose_attacks and not exit_event.is_set():
             # We don't want to spam the terminal on KeyboardInterrupt
