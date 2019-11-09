@@ -4,7 +4,6 @@ from flask import request, jsonify
 
 from server import app, database, reloader
 from server.models import FlagStatus
-from server.spam import is_spam_flag
 
 
 @app.route('/api/get_config')
@@ -17,7 +16,6 @@ def get_config():
 @app.route('/api/post_flags', methods=['POST'])
 def post_flags():
     flags = request.get_json()
-    flags = [item for item in flags if not is_spam_flag(item['flag'])]
 
     cur_time = round(time.time())
     rows = [(item['flag'], item['sploit'], item['team'], cur_time, FlagStatus.QUEUED.name)
