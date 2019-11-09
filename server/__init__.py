@@ -1,10 +1,9 @@
 import logging
-from werkzeug import serving
-from gevent import signal, monkey
 
-from werkzeug.contrib.fixers import ProxyFix
 from flask import Flask
-
+from gevent import signal
+from werkzeug import serving
+from werkzeug.contrib.fixers import ProxyFix
 
 app = Flask(__name__)
 
