@@ -12,9 +12,10 @@ CONFIG = {
     # The protocol must be a module in protocols/ directory.
     # RuCTF(E) and VolgaCTF checksystems are supported out-of-the-box.
 
-    'SYSTEM_PROTOCOL': 'ructf_tcp',
-    'SYSTEM_HOST': '10.0.0.1',
+    'SYSTEM_PROTOCOL': 'forcad_tcp',
+    'SYSTEM_HOST': '10.10.10.10',
     'SYSTEM_PORT': 31337,
+    'TEAM_TOKEN': 'c425c02bf4c80540',
 
 
     # 'SYSTEM_PROTOCOL': 'mctf_http',
