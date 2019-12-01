@@ -4,7 +4,8 @@ CONFIG = {
     # The clients will run sploits on TEAMS and
     # fetch FLAG_FORMAT from sploits' stdout.
     'TEAMS': {'Team #{}'.format(i): '10.70.{}.2'.format(i % 256)
-              for i in range(1, 7) if i != 1},
+              for i in range(1, 7) if i != 1
+              },
     # 'FLAG_FORMAT': r'CTF\.Moscow\{[a-zA-Z\.0-9_-]+\}',
     'FLAG_FORMAT': r'[A-Z0-9]{31}=',
 
@@ -12,18 +13,14 @@ CONFIG = {
     # The protocol must be a module in protocols/ directory.
     # RuCTF(E) and VolgaCTF checksystems are supported out-of-the-box.
 
+    # 'SYSTEM_PROTOCOL': 'ructf_http',
+    # 'SYSTEM_URL': 'http://monitor.ructfe.org/flags',
+    # 'SYSTEM_TOKEN': '275_17fc104dd58d429ec11b4a5e82041cd2',
+
     'SYSTEM_PROTOCOL': 'forcad_tcp',
     'SYSTEM_HOST': '10.10.10.10',
-    'SYSTEM_PORT': 31337,
-    'TEAM_TOKEN': 'c425c02bf4c80540',
-
-
-    # 'SYSTEM_PROTOCOL': 'mctf_http',
-    # 'SYSTEM_URL': 'http://10.23.0.7:8000',
-    # 'SYSTEM_TOKEN': 'your_secret_token',
-
-    # 'SYSTEM_PROTOCOL': 'ctf_moscow',
-    # 'SYSTEM_HOST': '2019.ctf.moscow',
+    'SYSTEM_PORT': '31337',
+    'TEAM_TOKEN': '4fdcd6e54faa8991',
     # 'VOLGA_FORMAT': True,
 
     # The server will submit not more than SUBMIT_FLAG_LIMIT flags

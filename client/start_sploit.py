@@ -3,7 +3,6 @@
 import argparse
 import binascii
 import itertools
-import json
 import logging
 import os
 import random
@@ -17,7 +16,8 @@ from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from math import ceil
 from urllib.parse import urljoin
-from urllib.request import Request, urlopen
+
+import requests
 
 if sys.version_info < (3, 4):
     logging.critical('Support of Python < 3.4 is not implemented yet')
@@ -80,6 +80,8 @@ def parse_args():
                         help="Sploit executable (should take a victim's host as the first argument)")
     parser.add_argument('--server-url', metavar='URL', default='http://localhost:5000',
                         help='Server URL')
+    parser.add_argument('--server-pass', metavar='PASS', default='1234',
+                        help='Server password')
     parser.add_argument('--interpreter', metavar='COMMAND',
                         help='Explicitly specify sploit interpreter (use on Windows, which doesn\'t '
                              'understand shebangs)')
@@ -117,7 +119,7 @@ def fix_args(args):
 
     if args.distribute is not None:
         valid = False
-        match = re.fullmatch(r'(\d+)/(\d+)', args.distribute)
+        match = re.fullmatch(r'(\d+)/(\d+)', str(args.distribute))
         if match is not None:
             k, n = (int(match.group(1)), int(match.group(2)))
             if n >= 2 and 1 <= k <= n:
@@ -238,24 +240,36 @@ class APIException(Exception):
 SERVER_TIMEOUT = 5
 
 
-def get_config(args):
-    with urlopen(urljoin(args.server_url, '/api/get_config'), timeout=SERVER_TIMEOUT) as conn:
-        if conn.status != 200:
-            raise APIException(conn.read())
+def get_auth_headers(args):
+    return {'AUTH': args.server_password}
 
-        return json.loads(conn.read().decode())
+
+def get_config(args):
+    url = urljoin(args.server_url, '/api/get_config')
+    headers = get_auth_headers(args)
+
+    r = requests.get(url, headers=headers, timeout=SERVER_TIMEOUT)
+    if not r.ok:
+        raise APIException(r.text)
+
+    return r.json()
 
 
 def post_flags(args, flags):
     sploit_name = os.path.basename(args.sploit)
-    data = [{'flag': item['flag'], 'sploit': sploit_name, 'team': item['team']}
-            for item in flags]
+    data = [
+        {
+            'flag': item['flag'],
+            'sploit': sploit_name,
+            'team': item['team']
+        } for item in flags
+    ]
 
-    req = Request(urljoin(args.server_url, '/api/post_flags'))
-    req.add_header('Content-Type', 'application/json')
-    with urlopen(req, data=json.dumps(data).encode(), timeout=SERVER_TIMEOUT) as conn:
-        if conn.status != 200:
-            raise APIException(conn.read())
+    url = urljoin(args.server_url, '/api/post_flags')
+    headers = get_auth_headers(args)
+    r = requests.post(url, headers=headers, json=data, timeout=SERVER_TIMEOUT)
+    if not r.ok:
+        raise APIException(r.text)
 
 
 exit_event = threading.Event()

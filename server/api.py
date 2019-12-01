@@ -1,6 +1,6 @@
 import time
 
-from flask import request, jsonify
+from flask import request, jsonify, abort
 
 from server import app, database, reloader
 from server.models import FlagStatus
@@ -9,13 +9,22 @@ from server.spam import is_spam_flag
 
 @app.route('/api/get_config')
 def get_config():
+    if request.headers.get('AUTH') != get_config()['SERVER_PASSWORD']:
+        abort(403)
+
     config = reloader.get_config()
-    return jsonify({key: value for key, value in config.items()
-                    if 'PASSWORD' not in key})
+    return jsonify({
+        key: value
+        for key, value in config.items()
+        if 'PASSWORD' not in key and 'TOKEN' not in key
+    })
 
 
 @app.route('/api/post_flags', methods=['POST'])
 def post_flags():
+    if request.headers.get('AUTH') != get_config()['SERVER_PASSWORD']:
+        abort(403)
+
     flags = request.get_json()
     flags = [item for item in flags if not is_spam_flag(item['flag'])]
 

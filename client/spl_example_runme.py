@@ -8,7 +8,7 @@ import sys
 
 
 # redis host is the same as farm host (usually, as farm starts redis server)
-REDIS_HOST = '127.0.0.1'
+REDIS_HOST = 'put redis host here'
 REDIS_PORT = 6378
 REDIS_DB = 2
 
