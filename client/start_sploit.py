@@ -33,7 +33,6 @@ HEADER = '''
 ██║     ╚════██║   ██║       ██╔══██╗██║   ██║   ██║       ╚════██║╚════██║██║  ██║
 ╚██████╗     ██║   ██║       ██████╔╝╚██████╔╝   ██║       ███████║     ██║██████╔╝
  ╚═════╝     ╚═╝   ╚═╝       ╚═════╝  ╚═════╝    ╚═╝       ╚══════╝     ╚═╝╚═════╝ 
-
 '''[1:]
 
 
@@ -57,6 +56,8 @@ class Style(Enum):
 
 BRIGHT_COLORS = [Style.FG_RED, Style.FG_GREEN, Style.FG_BLUE,
                  Style.FG_MAGENTA, Style.FG_CYAN]
+
+VERBOSE_LINES = 5
 
 
 def highlight(text, style=None):
@@ -383,7 +384,7 @@ def process_sploit_output(stream, args, team_name, flag_format, attack_no):
                 flag_storage.add(line_flags, team_name)
                 instance_flags |= line_flags
 
-            if args.endless and line_cnt <= args.verbose_attacks * 5:
+            if args.endless and line_cnt <= args.verbose_attacks * VERBOSE_LINES:
                 line_cnt += 1
                 display_sploit_output(team_name, output_lines)
                 output_lines = []
