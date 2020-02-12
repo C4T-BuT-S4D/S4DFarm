@@ -242,7 +242,7 @@ SERVER_TIMEOUT = 5
 
 
 def get_auth_headers(args):
-    return {'AUTH': args.server_password}
+    return {'AUTH': args.server_pass}
 
 
 def get_config(args):

@@ -8,7 +8,7 @@ from server.models import FlagStatus
 
 @app.route('/api/get_config')
 def get_config():
-    if request.headers.get('AUTH') != get_config()['SERVER_PASSWORD']:
+    if request.headers.get('AUTH') != reloader.get_config()['SERVER_PASSWORD']:
         abort(403)
 
     config = reloader.get_config()
@@ -21,7 +21,7 @@ def get_config():
 
 @app.route('/api/post_flags', methods=['POST'])
 def post_flags():
-    if request.headers.get('AUTH') != get_config()['SERVER_PASSWORD']:
+    if request.headers.get('AUTH') != reloader.get_config()['SERVER_PASSWORD']:
         abort(403)
 
     flags = request.get_json()
