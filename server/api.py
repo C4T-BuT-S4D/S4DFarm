@@ -1,4 +1,5 @@
 import time
+import importlib
 
 from flask import request, jsonify, abort
 
@@ -27,6 +28,11 @@ def post_flags():
     flags = request.get_json()
 
     cur_time = round(time.time())
+
+    if config.get('SYSTEM_VALIDATOR'):
+        validator_module = importlib.import_module('server.validators.' + config['SYSTEM_VALIDATOR'])
+        flags = validator_module.validate_flags(flags)
+
     rows = [(item['flag'], item['sploit'], item['team'], cur_time, FlagStatus.QUEUED.name)
             for item in flags]
 
