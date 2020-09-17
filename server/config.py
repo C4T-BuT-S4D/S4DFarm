@@ -23,9 +23,9 @@ CONFIG = {
     'SYSTEM_PORT': '31337',
     'TEAM_TOKEN': '4fdcd6e54faa8991',
     # 'VOLGA_FORMAT': True,
-    'SYSTEM_VALIDATOR' : 'volgactf',
-    'SYSTEM_HOST' : 'https://final.volgactf.ru',
-    'SYSTEM_SERVER_KEY' : validators.volgactf.get_public_key('https://final.volgactf.ru'),
+    #'SYSTEM_VALIDATOR' : 'volgactf',
+    #'SYSTEM_HOST' : 'https://final.volgactf.ru',
+    #'SYSTEM_SERVER_KEY' : validators.volgactf.get_public_key('https://final.volgactf.ru'),
 
     # The server will submit not more than SUBMIT_FLAG_LIMIT flags
     # every SUBMIT_PERIOD seconds. Flags received more than

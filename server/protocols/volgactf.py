@@ -57,10 +57,10 @@ def submit_flags(flags, config):
             headers=headers
             )
 
-        if r.status_code not in possible_http_codes or r.text.strip() not in ChecksystemResult:
+        if r.status_code not in possible_http_codes or r.text.strip() not in dir(ChecksystemResult):
             yield SubmitResult(item.flag, FlagStatus.QUEUED, 'could not submit flag')
             continue
-        code = ChecksystemResult[r.text]
+        code = ChecksystemResult[r.text.rstrip()]
 
         for status, possible_codes in RESPONSES.items():
             if code in possible_codes:

@@ -22,7 +22,10 @@ def decode(key, capsule):
     return payload
 
 def validate_flags(flags, config):
-    key = get_public_key(config['SYSTEM_HOST'])
+    key = config.get('SYSTEM_SERVER_KEY')
+    if not key:
+        key = get_public_key(config['SYSTEM_HOST'])
+
     for item in flags:
         item = copy.deepcopy(item)
         flag = item['flag']
