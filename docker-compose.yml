@@ -1,0 +1,18 @@
+version: '2.2'
+
+services:
+  farm:
+    build:
+      context: server
+      dockerfile: docker/Dockerfile
+    volumes:
+      - ./server:/server
+    restart: unless-stopped
+    ports:
+      - "5137:5000"
+
+  farm_redis:
+    image: redis:alpine
+    ports:
+      - "6378:6379"
+    restart: unless-stopped
