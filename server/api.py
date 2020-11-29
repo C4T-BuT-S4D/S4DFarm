@@ -1,17 +1,15 @@
-import time
 import importlib
+import time
 
-from flask import request, jsonify, abort
+from flask import request, jsonify
 
-from server import app, database, reloader
+from server import app, auth, database, reloader
 from server.models import FlagStatus
 
 
 @app.route('/api/get_config')
+@auth.api_auth_required
 def get_config():
-    if request.headers.get('AUTH') != reloader.get_config()['SERVER_PASSWORD']:
-        abort(403)
-
     config = reloader.get_config()
     return jsonify({
         key: value
@@ -21,13 +19,11 @@ def get_config():
 
 
 @app.route('/api/post_flags', methods=['POST'])
+@auth.api_auth_required
 def post_flags():
-    if request.headers.get('AUTH') != reloader.get_config()['SERVER_PASSWORD']:
-        abort(403)
-
     flags = request.get_json()
-
     cur_time = round(time.time())
+    config = reloader.get_config()
 
     if config.get('SYSTEM_VALIDATOR'):
         validator_module = importlib.import_module('server.validators.' + config['SYSTEM_VALIDATOR'])

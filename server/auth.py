@@ -1,5 +1,6 @@
 from functools import wraps
-from flask import request, Response
+
+from flask import request, Response, abort
 
 from server import reloader
 
@@ -19,4 +20,17 @@ def auth_required(f):
         if auth is None or auth.password != config['SERVER_PASSWORD']:
             return authenticate()
         return f(*args, **kwargs)
+
+    return decorated
+
+
+def api_auth_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.headers.get('AUTH')
+        config = reloader.get_config()
+        if auth != config['SERVER_PASSWORD']:
+            abort(403)
+        return f(*args, **kwargs)
+
     return decorated

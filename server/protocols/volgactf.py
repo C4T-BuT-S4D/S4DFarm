@@ -1,9 +1,12 @@
 from enum import Enum
+
 import requests
+
 from server.models import FlagStatus, SubmitResult
 
 API_PREFIX = 'api/capsule/v1'
 SUBMIT_ENDPOINT = 'submit'
+
 
 class ChecksystemResult(Enum):
     SUCCESS = 0  # submitted flag has been accepted
@@ -20,25 +23,27 @@ class ChecksystemResult(Enum):
     ERROR_FLAG_NOT_FOUND = 11  # submitted flag hs not been found
     ERROR_SERVICE_STATE_INVALID = 12  # the attacking team service is not up
 
+
 RESPONSES = {
-        FlagStatus.ACCEPTED: {ChecksystemResult.SUCCESS, 'accepted'},
-        FlagStatus.QUEUED: {
-            ChecksystemResult.ERROR_UNKNOWN.value : 'unknown error',
-            ChecksystemResult.ERROR_ACCESS_DENIED.value : 'access denied',
-            ChecksystemResult.ERROR_COMPETITION_NOT_STARTED.value : 'competition has not started',
-            ChecksystemResult.ERROR_COMPETITION_PAUSED.value : 'competition is paused',
-            ChecksystemResult.ERROR_COMPETITION_FINISHED.value : 'competition has finished',
-            ChecksystemResult.ERROR_RATELIMIT.value : 'ratelimit exceeded',
-            ChecksystemResult.ERROR_SERVICE_STATE_INVALID.value : 'attacking team service down',
-            },
-        FlagStatus.REJECTED: {
-            ChecksystemResult.ERROR_FLAG_INVALID.value : 'invalid flag',
-            ChecksystemResult.ERROR_FLAG_EXPIRED.value : 'expired',
-            ChecksystemResult.ERROR_FLAG_YOUR_OWN.value : 'you own flag',
-            ChecksystemResult.ERROR_FLAG_SUBMITTED.value : 'already submitted',
-            ChecksystemResult.ERROR_FLAG_NOT_FOUND.value : 'not found',
-            }
-        }
+    FlagStatus.ACCEPTED: {ChecksystemResult.SUCCESS, 'accepted'},
+    FlagStatus.QUEUED: {
+        ChecksystemResult.ERROR_UNKNOWN.value: 'unknown error',
+        ChecksystemResult.ERROR_ACCESS_DENIED.value: 'access denied',
+        ChecksystemResult.ERROR_COMPETITION_NOT_STARTED.value: 'competition has not started',
+        ChecksystemResult.ERROR_COMPETITION_PAUSED.value: 'competition is paused',
+        ChecksystemResult.ERROR_COMPETITION_FINISHED.value: 'competition has finished',
+        ChecksystemResult.ERROR_RATELIMIT.value: 'ratelimit exceeded',
+        ChecksystemResult.ERROR_SERVICE_STATE_INVALID.value: 'attacking team service down',
+    },
+    FlagStatus.REJECTED: {
+        ChecksystemResult.ERROR_FLAG_INVALID.value: 'invalid flag',
+        ChecksystemResult.ERROR_FLAG_EXPIRED.value: 'expired',
+        ChecksystemResult.ERROR_FLAG_YOUR_OWN.value: 'you own flag',
+        ChecksystemResult.ERROR_FLAG_SUBMITTED.value: 'already submitted',
+        ChecksystemResult.ERROR_FLAG_NOT_FOUND.value: 'not found',
+    }
+}
+
 
 def submit_flags(flags, config):
     headers = {'Content-Type': 'text/plain'}
@@ -48,14 +53,17 @@ def submit_flags(flags, config):
         requests.codes.forbidden,
         requests.codes.request_entity_too_large,
         requests.codes.too_many_requests
-        ]
+    ]
+
+    host = config['SYSTEM_HOST']
+    url = f'{host}/{API_PREFIX}/{SUBMIT_ENDPOINT}'
 
     for item in flags:
         r = requests.post(
-            "%s/%s/%s" % (config['SYSTEM_HOST'], API_PREFIX, SUBMIT_ENDPOINT),
+            url,
             data=item.flag,
-            headers=headers
-            )
+            headers=headers,
+        )
 
         if r.status_code not in possible_http_codes or r.text.strip() not in dir(ChecksystemResult):
             yield SubmitResult(item.flag, FlagStatus.QUEUED, 'could not submit flag')
