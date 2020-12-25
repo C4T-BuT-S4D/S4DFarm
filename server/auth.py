@@ -27,7 +27,7 @@ def auth_required(f):
 def api_auth_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        auth = request.headers.get('AUTH')
+        auth = request.headers.get('Authorization')
         config = reloader.get_config()
         if auth != config['SERVER_PASSWORD']:
             abort(403)
