@@ -1,7 +1,7 @@
 <template>
   <q-card class="q-pa-md">
     <q-card-section>
-      <div class="text-h6">Manual submit flags</div>
+      <div class="text-h6">Submit manually</div>
     </q-card-section>
     <q-card-section>
       <q-form @submit.prevent="onSubmit">
