@@ -1,15 +1,24 @@
-version: '2.2'
+version: '2.4'
 
 services:
   farm:
     build:
-      context: server
-      dockerfile: docker/Dockerfile
+      context: ./server
+      dockerfile: ./docker/server/Dockerfile
     volumes:
-      - ./server:/server
+      - ./server/app:/app
+      - ./data:/data
+    environment:
+      - FARM_DATA=/data
+    restart: unless-stopped
+
+  front:
+    build:
+      context: ./server
+      dockerfile: ./docker/front/Dockerfile
     restart: unless-stopped
     ports:
-      - "5137:5000"
+      - "5137:80"
 
   farm_redis:
     image: redis:alpine
