@@ -5,7 +5,7 @@ import { flagsPerPage } from "@/config";
 import createPersistedState from "vuex-persistedstate";
 
 export default createStore({
-  plugins: [createPersistedState()],
+    plugins: [createPersistedState({ paths: ['serverPassword'] })],
   state: {
     totalFlags: 0,
     selectedPage: 1,
