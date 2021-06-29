@@ -62,7 +62,7 @@ export default {
     paginationMessage: function () {
       const firstRow = this.pageSize * (this.page - 1) + 1;
       const lastRow = this.pageSize * this.page;
-      return `${firstRow}-${lastRow} of ${this.total + 1}`;
+      return `${firstRow}-${lastRow} of ${this.total}`;
     },
   },
   emits: ["firstPage", "prevPage", "nextPage", "lastPage"],
