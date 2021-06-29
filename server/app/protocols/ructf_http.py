@@ -1,8 +1,7 @@
 import requests
+from flask import current_app as app
 
-from server import app
-from server.models import FlagStatus, SubmitResult
-
+from models import FlagStatus, SubmitResult
 
 RESPONSES = {
     FlagStatus.QUEUED: ['timeout', 'game not started', 'try again later', 'game over', 'is not up',

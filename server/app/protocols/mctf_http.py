@@ -1,9 +1,8 @@
+import json
+
 import requests
 
-from server import app
-import json
-from server.models import FlagStatus, SubmitResult
-
+from models import FlagStatus, SubmitResult
 
 RESPONSES = {
     FlagStatus.QUEUED: ['timeout', 'game not started', 'try again later', 'game over', 'is not up',

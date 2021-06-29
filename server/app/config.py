@@ -1,10 +1,13 @@
+import os
+
 CONFIG = {
     # Don't forget to remove the old database (flags.sqlite) before each competition.
+    'DEBUG': os.getenv('DEBUG') == '1',
 
     # The clients will run sploits on TEAMS and
     # fetch FLAG_FORMAT from sploits' stdout.
     'TEAMS': {'Team #{}'.format(i): '10.70.{}.2'.format(i % 256)
-              for i in range(1, 7) if i != 1
+              for i in range(1, 100) if i != 1
               },
     # 'FLAG_FORMAT': r'CTF\.Moscow\{[a-zA-Z\.0-9_-]+\}',
     'FLAG_FORMAT': r'[A-Z0-9]{31}=',

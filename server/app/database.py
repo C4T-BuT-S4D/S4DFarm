@@ -2,26 +2,20 @@
 Module with SQLite helpers, see http://flask.pocoo.org/docs/0.12/patterns/sqlite3/
 """
 
-import os
 import sqlite3
 import threading
 
-from flask import g
+from flask import g, current_app
 
-from server import app
-
-
-db_filename = os.path.join(os.path.dirname(__file__), 'flags.sqlite')
-
+from constants import DB_PATH, SCHEMA_PATH
 
 _init_started = False
 _init_lock = threading.RLock()
 
 
 def _init(database):
-    app.logger.info('Creating database schema')
-    with app.open_resource('schema.sql', 'r') as f:
-        database.executescript(f.read())
+    current_app.logger.info('Creating database schema at %s', DB_PATH)
+    database.executescript(SCHEMA_PATH.read_text())
 
 
 def get(context_bound=True):
@@ -47,8 +41,8 @@ def get(context_bound=True):
     if context_bound and 'database' in g:
         return g.database
 
-    need_init = not os.path.exists(db_filename)
-    database = sqlite3.connect(db_filename)
+    need_init = not DB_PATH.exists()
+    database = sqlite3.connect(DB_PATH)
     database.row_factory = sqlite3.Row
 
     if need_init:
@@ -66,7 +60,6 @@ def query(sql, args=()):
     return get().execute(sql, args).fetchall()
 
 
-@app.teardown_appcontext
-def close(_):
+def close_db(_):
     if 'database' in g:
         g.database.close()

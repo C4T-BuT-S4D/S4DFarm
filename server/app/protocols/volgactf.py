@@ -2,7 +2,7 @@ from enum import Enum
 
 import requests
 
-from server.models import FlagStatus, SubmitResult
+from models import FlagStatus, SubmitResult
 
 API_PREFIX = 'api/capsule/v1'
 SUBMIT_ENDPOINT = 'submit'

@@ -1,6 +1,6 @@
 from volgactf.final.flag_api import FlagAPIHelper, SubmitResult as SR
 
-from server.models import FlagStatus, SubmitResult
+from models import FlagStatus, SubmitResult
 
 RESPONSES = {
     FlagStatus.QUEUED: [

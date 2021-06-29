@@ -1,8 +1,7 @@
 from themis.finals.attack.helper import Helper
 from themis.finals.attack.result import Result
 
-from server.models import FlagStatus, SubmitResult
-
+from models import FlagStatus, SubmitResult
 
 RESPONSES = {
     FlagStatus.ACCEPTED: [Result.SUCCESS_FLAG_ACCEPTED],

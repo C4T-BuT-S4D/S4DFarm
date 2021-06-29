@@ -3,12 +3,16 @@ import random
 import threading
 import time
 from collections import defaultdict
+from typing import List, Any
 
-from server import app, database, reloader
-from server.models import Flag, FlagStatus, SubmitResult
+from flask import current_app
+
+import database
+import reloader
+from models import Flag, FlagStatus, SubmitResult
 
 
-def get_fair_share(groups, limit):
+def get_fair_share(groups: List[List[Any]], limit: int):
     if not groups:
         return []
 
@@ -40,25 +44,26 @@ def get_fair_share(groups, limit):
     return result
 
 
-def submit_flags(flags, config):
-    module = importlib.import_module('server.protocols.' + config['SYSTEM_PROTOCOL'])
+def submit_flags(flags: List[Flag], config) -> List[SubmitResult]:
+    module = importlib.import_module('protocols.' + config['SYSTEM_PROTOCOL'])
 
     try:
         return list(module.submit_flags(flags, config))
     except Exception as e:
         message = '{}: {}'.format(type(e).__name__, str(e))
-        app.logger.error('Exception on submitting flags: %s', message)
+        current_app.logger.error('Exception on submitting flags: %s', message)
         return [SubmitResult(item.flag, FlagStatus.QUEUED, message) for item in flags]
 
 
 class SubmitThread(threading.Thread):
-    def __init__(self):
+    def __init__(self, app):
         self.is_active = True
+        self.app = app
         super(SubmitThread, self).__init__()
 
     def run(self):
-        app.logger.info('Starting submit loop')
-        with app.app_context():
+        with self.app.app_context():
+            self.app.logger.info('Starting submit loop')
             db = database.get(context_bound=False)
 
         while True:
@@ -81,10 +86,13 @@ class SubmitThread(threading.Thread):
                 grouped_flags = defaultdict(list)
                 for item in queued_flags:
                     grouped_flags[item.sploit, item.team].append(item)
-                flags = get_fair_share(grouped_flags.values(), config['SUBMIT_FLAG_LIMIT'])
+                flags = get_fair_share(list(grouped_flags.values()), config['SUBMIT_FLAG_LIMIT'])
 
-                app.logger.debug('Submitting %s flags (out of %s in queue)', len(flags), len(queued_flags))
-                results = submit_flags(flags, config)
+                with self.app.app_context():
+                    self.app.logger.debug('Submitting %s flags (out of %s in queue)', len(flags), len(queued_flags))
+
+                with self.app.app_context():
+                    results = submit_flags(flags, config)
 
                 rows = [(item.status.name, item.checksystem_response, item.flag) for item in results]
                 db.executemany("UPDATE flags SET status = ?, checksystem_response = ? "
@@ -95,7 +103,8 @@ class SubmitThread(threading.Thread):
             if config['SUBMIT_PERIOD'] > submit_spent:
                 time.sleep(config['SUBMIT_PERIOD'] - submit_spent)
 
-        app.logger.info('Stopped submit loop')
+        with self.app.app_context():
+            self.app.logger.info('Stopped submit loop')
 
     def join(self, timeout=None):
         self.is_active = False
