@@ -61,11 +61,11 @@ def get_filtered_flags():
         if value:
             conditions.append(('INSTR(LOWER({}), ?)'.format(column), value.lower()))
 
-    for param in ['time-since', 'time-until']:
+    for column in ['time-since', 'time-until']:
         value = filters.get(column, '').strip()
         if value:
             timestamp = round(datetime.strptime(value, '%Y-%m-%d %H:%M').timestamp())
-            sign = '>=' if param == 'time-since' else '<='
+            sign = '>=' if column == 'time-since' else '<='
             conditions.append(('time {} ?'.format(sign), timestamp))
 
     page = int(filters.get('page', 1))

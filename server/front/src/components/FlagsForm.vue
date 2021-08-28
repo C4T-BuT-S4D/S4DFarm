@@ -147,7 +147,7 @@ export default {
         status: this.status,
         checksystem_response: this.checksystemResponse,
       };
-      console.log("Flag filters", filters);
+
       this.setFlagFilters(filters);
       this.setSelectedPage(1);
       await this.fetchFlags();

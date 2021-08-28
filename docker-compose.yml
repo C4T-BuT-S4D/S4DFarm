@@ -7,7 +7,7 @@ services:
       dockerfile: ./docker/server/Dockerfile
     volumes:
       - ./server/app:/app
-      - ./data:/data
+      - ./server/data:/data
     environment:
       - FARM_DATA=/data
     restart: unless-stopped

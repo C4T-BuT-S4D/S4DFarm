@@ -79,6 +79,8 @@ export default createStore({
       } catch (e) {
         console.error("Error fetching tasks", e);
       }
+
+      await context.dispatch("fetchFilterOptions");
     },
 
     updatePage: async function (context, page) {
