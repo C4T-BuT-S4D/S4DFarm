@@ -33,6 +33,9 @@ CONFIG = {
     # every SUBMIT_PERIOD seconds. Flags received more than
     # FLAG_LIFETIME seconds ago will be skipped.
     'SUBMIT_FLAG_LIMIT': 100,
+    # Don't make more than INFO_FLAG_LIMIT requests to get flag info,
+    # usually should be more than SUBMIT_FLAG_LIMIT
+    'INFO_FLAG_LIMIT': 10,
     'SUBMIT_PERIOD': 2,
     'FLAG_LIFETIME': 5 * 60,
 

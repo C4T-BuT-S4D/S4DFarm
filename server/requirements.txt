@@ -18,3 +18,4 @@ Werkzeug==2.0.1
 zope.event==4.5.0
 zope.interface==5.4.0
 python-dateutil>=2.8.2
+grequests>=0.6.0

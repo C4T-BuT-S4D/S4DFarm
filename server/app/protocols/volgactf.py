@@ -1,9 +1,9 @@
 from enum import Enum
-from os import stat
-from typing import Tuple, Optional
+from typing import Iterable, List, Tuple, Optional
 from models import FlagStatus, SubmitResult
 import dateutil.parser
 import datetime
+import grequests
 import requests
 
 class ChecksystemResult(Enum):
@@ -49,85 +49,83 @@ BAD_RESPONSES = {
 
 class API:
     def __init__(self, host, version='v1'):
-        self.session = requests.Session()
         self.api = f'https://{host}/api/flag/{version}'
-        self.prepared_submit = requests.Request(
-            method='post',
-            url=f'{self.api}/submit',
-            headers={'Content-Type': 'text/plain'}
-        ).prepare()
-        self.prepared_info = requests.Request(
-            method='get',
-            url=f'{self.api}/info'
-        ).prepare()
 
-    def info_flag_api(self, flag: str) -> Tuple[GetInfoResult, Optional[dict]]:
-        original = self.prepared_info.url
-        self.prepared_info.url += '/' + flag
-        response = self.session.send(self.prepared_info)
-        self.prepared_info.url = original
-
-        if response.status_code == 200:
-            return GetInfoResult.SUCCESS, response.json()
-        else:
-            try:
-                respcode = GetInfoResult[response.text]
-            except:
-                respcode = GetInfoResult.ERROR_UNKNOWN
-            return respcode, None
-
-    def submit_flag_api(self, flag: str) -> ChecksystemResult:
-        self.prepared_submit.prepare_body(flag)
-        response = self.session.send(self.prepared_submit)
-
-        try:
-            return ChecksystemResult[response.text]
-        except:
-            return ChecksystemResult.ERROR_UNKNOWN
-
+    @staticmethod
     def flag_is_fresh(info, until_seconds=2):
         expiry = dateutil.parser.parse(info['exp'])
         until = datetime.datetime.now() + datetime.timedelta(seconds=until_seconds)
         return expiry >= until
 
-    def validate_flag(self, flag: str) -> Tuple[bool, Optional[Tuple[FlagStatus, str]]]:
-        info_code, info = self.info_flag_api(flag)
-        if info_code == GetInfoResult.SUCCESS:
-            if self.flag_is_fresh(info):
+    @staticmethod
+    def parse_flag_info_response(flag: str, response: requests.Response):
+        if response.status_code == 200:
+            info = response.json()
+            if API.flag_is_fresh(info):
                 return True, None
-            return False, (FlagStatus.REJECTED, 'expired')
-        if info_code == GetInfoResult.ERROR_RATELIMIT:
-            return False, (FlagStatus.QUEUED, 'flag info ratelimit')
-        return False, (FlagStatus.QUEUED, f'error response from flag getinfo: {info_code}')
+            return False, SubmitResult(flag, FlagStatus.REJECTED, 'expired')
+        try:
+            respcode = GetInfoResult[response.text]
+        except:
+            respcode = GetInfoResult.ERROR_UNKNOWN
+        if respcode == GetInfoResult.ERROR_RATELIMIT:
+            return False, SubmitResult(flag, FlagStatus.QUEUED, 'flag info ratelimit')
+        return False, SubmitResult(flag, FlagStatus.QUEUED, f'error response from flag getinfo: {respcode}')
 
-    def submit_flag(self, flag: str) -> Tuple[FlagStatus, str]:
-        submit_code = self.submit_flag_api(flag)
-        if submit_code == ChecksystemResult.SUCCESS:
-            return FlagStatus.ACCEPTED, 'accepted'
+    def info_flags(self, *flags: str):
+        pending = (grequests.get(f'{self.api}/info/{flag}') for flag in flags)
+        responses = grequests.map(pending)
+        return zip(flags, map(flags, API.parse_flag_info_response, responses))
+
+    @staticmethod
+    def parse_flag_submit_response(flag: str, response: requests.Response):
+        try:
+            result_code = ChecksystemResult[response.text]
+        except:
+            result_code = ChecksystemResult.ERROR_UNKNOWN
+        if result_code == ChecksystemResult.SUCCESS:
+            return SubmitResult(flag, FlagStatus.ACCEPTED, 'accepted')
         for status, possible_codes in BAD_RESPONSES.items():
-            if submit_code in possible_codes:
-                return status, BAD_RESPONSES[status][submit_code]
-        return FlagStatus.QUEUED, f'unknown checksystem code: {submit_code}'
+            if result_code in possible_codes:
+                return SubmitResult(flag, status, BAD_RESPONSES[status][result_code])
+        return SubmitResult(flag, FlagStatus.QUEUED, f'unknown checksystem code: {result_code}')
 
-FLAG_INFO_RATE = 10
-FLAG_SUBMIT_RATE = 5
+    def submit_flags(self, *flags: str):
+        h = {'Content-Type': 'text/plain'}
+        pending = (grequests.post(f'{self.api}/submit', data=flag, headers=h) for flag in flags)
+        responses = grequests.map(pending)
+        return map(flags, API.parse_flag_submit_response, responses)
 
 def submit_flags(flags, config):
     api = API(config['SYSTEM_HOST'])
+    info_rate = config['INFO_FLAG_LIMIT']
+    submit_rate = config['SUBMIT_FLAG_LIMIT']
 
-    submitted = 0
-    # Validate as many flags as we can
-    for flag in flags[:FLAG_INFO_RATE]:
-        valid, info = api.validate_flag(flag)
-        if valid:
-            # While we haven't reached the rate limit, submit flags
-            if submitted < FLAG_SUBMIT_RATE:
-                status, message = api.submit_flag(flag)
-                yield SubmitResult(flag, status, message)
-                submitted += 1
-            else:
-                yield SubmitResult(flag, FlagStatus.QUEUED, 'flag submission ratelimit')
-        yield SubmitResult(flag, info[0], info[1])
-    # Queue others
-    for flag in flags[FLAG_INFO_RATE:]:
-        yield SubmitResult(flag, FlagStatus.QUEUED, 'flag info ratelimit')
+    # Get as much flag infos as we can
+    flags_info = api.info_flags(*flags[:info_rate])
+    flags_processed = info_rate
+
+    flags_to_submit = []
+    other_flags = []
+    for info in flags_info:
+        # If flag info returned valid answer and flag isn't expired
+        if info[1][0]:
+            flags_to_submit.append(info[0])
+        else:
+            other_flags.append(info[1][1])
+
+    # Submit as many flags as we can
+    for s in api.submit_flags(*flags_to_submit[:submit_rate]):
+        yield s
+    # Queue other valid flags
+    for flag in flags_to_submit[submit_rate:]:
+        yield SubmitResult(flag, FlagStatus.QUEUED, 'flag submission ratelimit')
+
+    # If we didn't submit submit_rate flags then try to use the rate limit up even more
+    if len(flags_to_submit) < submit_rate:
+        flags_processed += submit_rate - len(flags_to_submit)
+        for s in api.submit_flags(*flags[info_rate:flags_processed]):
+            yield s
+
+    for flag in flags[flags_processed:]:
+        yield SubmitResult(flag, FlagStatus.QUEUED, 'flag ratelimit')
