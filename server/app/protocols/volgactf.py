@@ -75,7 +75,7 @@ class API:
     def info_flags(self, *flags: str):
         pending = (grequests.get(f'{self.api}/info/{flag}') for flag in flags)
         responses = grequests.map(pending)
-        return zip(flags, map(flags, API.parse_flag_info_response, responses))
+        return dict(zip(flags, map(flags, API.parse_flag_info_response, responses)))
 
     @staticmethod
     def parse_flag_submit_response(flag: str, response: requests.Response):
@@ -107,25 +107,17 @@ def submit_flags(flags, config):
 
     flags_to_submit = []
     other_flags = []
-    for info in flags_info:
+    for flag, info in flags_info.items():
         # If flag info returned valid answer and flag isn't expired
-        if info[1][0]:
-            flags_to_submit.append(info[0])
+        if info[0] and len(flags_to_submit) < submit_rate:
+            flags_to_submit.append(flag)
         else:
-            other_flags.append(info[1][1])
+            other_flags.append(info[1] if info[0] else SubmitResult(flag, FlagStatus.QUEUED, 'flag submission ratelimit'))
+    # If we didn't submit submit_rate flags then try to use the rate limit up even more
+    flags_processed += submit_rate - len(flags_to_submit)
+    flags_to_submit += flags[info_rate:flags_processed]
 
     # Submit as many flags as we can
-    for s in api.submit_flags(*flags_to_submit[:submit_rate]):
+    for s in api.submit_flags(*flags_to_submit) + other_flags + \
+            map(lambda f: SubmitResult(f, FlagStatus.QUEUED, 'flag ratelimit'), flags[flags_processed:]):
         yield s
-    # Queue other valid flags
-    for flag in flags_to_submit[submit_rate:]:
-        yield SubmitResult(flag, FlagStatus.QUEUED, 'flag submission ratelimit')
-
-    # If we didn't submit submit_rate flags then try to use the rate limit up even more
-    if len(flags_to_submit) < submit_rate:
-        flags_processed += submit_rate - len(flags_to_submit)
-        for s in api.submit_flags(*flags[info_rate:flags_processed]):
-            yield s
-
-    for flag in flags[flags_processed:]:
-        yield SubmitResult(flag, FlagStatus.QUEUED, 'flag ratelimit')
