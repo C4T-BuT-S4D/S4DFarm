@@ -75,7 +75,7 @@ class API:
     def info_flags(self, *flags: str):
         pending = (grequests.get(f'{self.api}/info/{flag}') for flag in flags)
         responses = grequests.map(pending)
-        return dict(zip(flags, map(flags, API.parse_flag_info_response, responses)))
+        return dict(zip(flags, map(API.parse_flag_info_response, flags, responses)))
 
     @staticmethod
     def parse_flag_submit_response(flag: str, response: requests.Response):
@@ -94,7 +94,7 @@ class API:
         h = {'Content-Type': 'text/plain'}
         pending = (grequests.post(f'{self.api}/submit', data=flag, headers=h) for flag in flags)
         responses = grequests.map(pending)
-        return map(flags, API.parse_flag_submit_response, responses)
+        return map(API.parse_flag_submit_response, flags, responses)
 
 def submit_flags(flags, config):
     api = API(config['SYSTEM_HOST'])
@@ -105,19 +105,18 @@ def submit_flags(flags, config):
     flags_info = api.info_flags(*flags[:info_rate])
     flags_processed = info_rate
 
-    flags_to_submit = []
-    other_flags = []
-    for flag, info in flags_info.items():
-        # If flag info returned valid answer and flag isn't expired
-        if info[0] and len(flags_to_submit) < submit_rate:
-            flags_to_submit.append(flag)
-        else:
-            other_flags.append(info[1] if info[0] else SubmitResult(flag, FlagStatus.QUEUED, 'flag submission ratelimit'))
-    # If we didn't submit submit_rate flags then try to use the rate limit up even more
-    flags_processed += submit_rate - len(flags_to_submit)
-    flags_to_submit += flags[info_rate:flags_processed]
+    # Filter by flags which we can submit
+    submit_flags = filter(lambda flag: flags_info[flag][0], flags_info)
+    # Other flags which are expired / invalid
+    other_flags = map(lambda flag: flags_info[flag][1], filter(lambda flag: not flags_info[flag][0], flags_info))
+    # Add extra flags to submit if we don't hae submit_rate valid flags
+    if len(submit_flags) < submit_rate:
+        flags_processed += submit_rate - len(submit_flags)
+        submit_flags += flags[info_rate:flags_processed]
 
-    # Submit as many flags as we can
-    for s in api.submit_flags(*flags_to_submit) + other_flags + \
-            map(lambda f: SubmitResult(f, FlagStatus.QUEUED, 'flag ratelimit'), flags[flags_processed:]):
+    for s in api.submit_flags(*submit_flags[:submit_rate]) + other_flags + \
+            map(
+                lambda f: SubmitResult(f, FlagStatus.QUEUED, 'flag submission ratelimit'),
+                submit_flags[submit_rate:] + flags[flags_processed:]
+            ):
         yield s
