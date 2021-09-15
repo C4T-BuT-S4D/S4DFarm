@@ -128,3 +128,6 @@ def submit_flags(flags, config):
             else:
                 yield SubmitResult(flag, FlagStatus.QUEUED, 'flag submission ratelimit')
         yield SubmitResult(flag, info[0], info[1])
+    # Queue others
+    for flag in flags[FLAG_INFO_RATE:]:
+        yield SubmitResult(flag, FlagStatus.QUEUED, 'flag info ratelimit')
