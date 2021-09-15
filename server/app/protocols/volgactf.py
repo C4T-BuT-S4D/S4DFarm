@@ -28,7 +28,10 @@ class GetInfoResult(Enum):
     ERROR_NOT_FOUND = 3  # flag is invalid
     ERROR_RATELIMIT = 4  # rate limit exceeded
 
-BAD_RESPONSES = {
+RESPONSES = {
+    FlagStatus.ACCEPTED: {
+        ChecksystemResult.SUCCESS: 'success'
+    },
     FlagStatus.QUEUED: {
         ChecksystemResult.ERROR_UNKNOWN: 'unknown error',
         ChecksystemResult.ERROR_ACCESS_DENIED: 'access denied',
@@ -83,11 +86,9 @@ class API:
             result_code = ChecksystemResult[response.text]
         except:
             result_code = ChecksystemResult.ERROR_UNKNOWN
-        if result_code == ChecksystemResult.SUCCESS:
-            return SubmitResult(flag, FlagStatus.ACCEPTED, 'accepted')
-        for status, possible_codes in BAD_RESPONSES.items():
+        for status, possible_codes in RESPONSES.items():
             if result_code in possible_codes:
-                return SubmitResult(flag, status, BAD_RESPONSES[status][result_code])
+                return SubmitResult(flag, status, RESPONSES[status][result_code])
         return SubmitResult(flag, FlagStatus.QUEUED, f'unknown checksystem code: {result_code}')
 
     def submit_flags(self, *flags: str):
