@@ -32,7 +32,7 @@ def post_flags():
 
     if config.get('SYSTEM_VALIDATOR'):
         validator_module = importlib.import_module('validators.' + config['SYSTEM_VALIDATOR'])
-        flags = validator_module.validate_flags(flags)
+        flags = validator_module.validate_flags(flags, config)
 
     rows = [(item['flag'], item['sploit'], item['team'], cur_time, FlagStatus.QUEUED.name)
             for item in flags]
