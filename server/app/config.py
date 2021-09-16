@@ -26,7 +26,6 @@ CONFIG = {
     #'SYSTEM_HOST': '10.10.10.10',
     #'SYSTEM_PORT': '31337',
     #'TEAM_TOKEN': '4fdcd6e54faa8991',
-    'VOLGA_FORMAT': True,
     'SYSTEM_PROTOCOL': 'volgactf',
     'SYSTEM_VALIDATOR' : 'volgactf',
     'SYSTEM_HOST' : 'final.volgactf.ru',
