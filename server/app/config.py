@@ -12,7 +12,7 @@ CONFIG = {
     #          },
     'TEAMS': {'Team #{}'.format(str(i).zfill(2)): '10.5.1{}.3'.format(str(i).zfill(2)) for i in range(0, 100)},
     # 'FLAG_FORMAT': r'CTF\.Moscow\{[a-zA-Z\.0-9_-]+\}',
-    'FLAG_FORMAT': r'[\w-]*\.[\w-]*\.[\w-]*',
+    'FLAG_FORMAT': r'VolgaCTF{[\w-]*\.[\w-]*\.[\w-]*}',
 
     # This configures how and where to submit flags.
     # The protocol must be a module in protocols/ directory.
@@ -35,7 +35,7 @@ CONFIG = {
     # The server will submit not more than SUBMIT_FLAG_LIMIT flags
     # every SUBMIT_PERIOD seconds. Flags received more than
     # FLAG_LIFETIME seconds ago will be skipped.
-    'SUBMIT_FLAG_LIMIT': 100,
+    'SUBMIT_FLAG_LIMIT': 5,
     # Don't make more than INFO_FLAG_LIMIT requests to get flag info,
     # usually should be more than SUBMIT_FLAG_LIMIT
     'INFO_FLAG_LIMIT': 10,
