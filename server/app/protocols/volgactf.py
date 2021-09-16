@@ -1,12 +1,10 @@
 from enum import Enum
-
-import requests
-
+from typing import Iterable, List, Tuple, Optional
 from models import FlagStatus, SubmitResult
-
-API_PREFIX = 'api/capsule/v1'
-SUBMIT_ENDPOINT = 'submit'
-
+import dateutil.parser
+import datetime
+import grequests
+import requests
 
 class ChecksystemResult(Enum):
     SUCCESS = 0  # submitted flag has been accepted
@@ -23,53 +21,103 @@ class ChecksystemResult(Enum):
     ERROR_FLAG_NOT_FOUND = 11  # submitted flag hs not been found
     ERROR_SERVICE_STATE_INVALID = 12  # the attacking team service is not up
 
+class GetInfoResult(Enum):
+    SUCCESS = 0  # submitted flag has been accepted
+    ERROR_UNKNOWN = 1  # generic error
+    ERROR_ACCESS_DENIED = 2  # getinfo calls are allowed from a team's subnet
+    ERROR_NOT_FOUND = 3  # flag is invalid
+    ERROR_RATELIMIT = 4  # rate limit exceeded
 
 RESPONSES = {
-    FlagStatus.ACCEPTED: {ChecksystemResult.SUCCESS, 'accepted'},
+    FlagStatus.ACCEPTED: {
+        ChecksystemResult.SUCCESS: 'success'
+    },
     FlagStatus.QUEUED: {
-        ChecksystemResult.ERROR_UNKNOWN.value: 'unknown error',
-        ChecksystemResult.ERROR_ACCESS_DENIED.value: 'access denied',
-        ChecksystemResult.ERROR_COMPETITION_NOT_STARTED.value: 'competition has not started',
-        ChecksystemResult.ERROR_COMPETITION_PAUSED.value: 'competition is paused',
-        ChecksystemResult.ERROR_COMPETITION_FINISHED.value: 'competition has finished',
-        ChecksystemResult.ERROR_RATELIMIT.value: 'ratelimit exceeded',
-        ChecksystemResult.ERROR_SERVICE_STATE_INVALID.value: 'attacking team service down',
+        ChecksystemResult.ERROR_UNKNOWN: 'unknown error',
+        ChecksystemResult.ERROR_ACCESS_DENIED: 'access denied',
+        ChecksystemResult.ERROR_COMPETITION_NOT_STARTED: 'competition has not started',
+        ChecksystemResult.ERROR_COMPETITION_PAUSED: 'competition is paused',
+        ChecksystemResult.ERROR_COMPETITION_FINISHED: 'competition has finished',
+        ChecksystemResult.ERROR_RATELIMIT: 'ratelimit exceeded',
+        ChecksystemResult.ERROR_SERVICE_STATE_INVALID: 'attacking team service down',
     },
     FlagStatus.REJECTED: {
-        ChecksystemResult.ERROR_FLAG_INVALID.value: 'invalid flag',
-        ChecksystemResult.ERROR_FLAG_EXPIRED.value: 'expired',
-        ChecksystemResult.ERROR_FLAG_YOUR_OWN.value: 'you own flag',
-        ChecksystemResult.ERROR_FLAG_SUBMITTED.value: 'already submitted',
-        ChecksystemResult.ERROR_FLAG_NOT_FOUND.value: 'not found',
+        ChecksystemResult.ERROR_FLAG_INVALID: 'invalid flag',
+        ChecksystemResult.ERROR_FLAG_EXPIRED: 'expired',
+        ChecksystemResult.ERROR_FLAG_YOUR_OWN: 'you own flag',
+        ChecksystemResult.ERROR_FLAG_SUBMITTED: 'already submitted',
+        ChecksystemResult.ERROR_FLAG_NOT_FOUND: 'not found',
     }
 }
 
+class API:
+    def __init__(self, host, version='v1'):
+        self.api = f'https://{host}/api/flag/{version}'
+
+    @staticmethod
+    def flag_is_fresh(info, until_seconds=2):
+        expiry = dateutil.parser.parse(info['exp'])
+        until = datetime.datetime.now() + datetime.timedelta(seconds=until_seconds)
+        return expiry >= until
+
+    @staticmethod
+    def parse_flag_info_response(flag: str, response: requests.Response):
+        if response.status_code == 200:
+            info = response.json()
+            if API.flag_is_fresh(info):
+                return True, None
+            return False, SubmitResult(flag, FlagStatus.REJECTED, 'expired')
+        try:
+            respcode = GetInfoResult[response.text]
+        except:
+            respcode = GetInfoResult.ERROR_UNKNOWN
+        if respcode == GetInfoResult.ERROR_RATELIMIT:
+            return False, SubmitResult(flag, FlagStatus.QUEUED, 'flag info ratelimit')
+        return False, SubmitResult(flag, FlagStatus.QUEUED, f'error response from flag getinfo: {respcode}')
+
+    def info_flags(self, *flags: str):
+        pending = (grequests.get(f'{self.api}/info/{flag}') for flag in flags)
+        responses = grequests.map(pending)
+        return dict(zip(flags, map(API.parse_flag_info_response, flags, responses)))
+
+    @staticmethod
+    def parse_flag_submit_response(flag: str, response: requests.Response):
+        try:
+            result_code = ChecksystemResult[response.text]
+        except:
+            result_code = ChecksystemResult.ERROR_UNKNOWN
+        for status, possible_codes in RESPONSES.items():
+            if result_code in possible_codes:
+                return SubmitResult(flag, status, RESPONSES[status][result_code])
+        return SubmitResult(flag, FlagStatus.QUEUED, f'unknown checksystem code: {result_code}')
+
+    def submit_flags(self, *flags: str):
+        h = {'Content-Type': 'text/plain'}
+        pending = (grequests.post(f'{self.api}/submit', data=flag, headers=h) for flag in flags)
+        responses = grequests.map(pending)
+        return map(API.parse_flag_submit_response, flags, responses)
 
 def submit_flags(flags, config):
-    headers = {'Content-Type': 'text/plain'}
-    possible_http_codes = [
-        requests.codes.ok,
-        requests.codes.bad_request,
-        requests.codes.forbidden,
-        requests.codes.request_entity_too_large,
-        requests.codes.too_many_requests
-    ]
+    api = API(config['SYSTEM_HOST'])
+    info_rate = config['INFO_FLAG_LIMIT']
+    submit_rate = config['SUBMIT_FLAG_LIMIT']
 
-    host = config['SYSTEM_HOST']
-    url = f'{host}/{API_PREFIX}/{SUBMIT_ENDPOINT}'
+    # Get as much flag infos as we can
+    flags_info = api.info_flags(*flags[:info_rate])
+    flags_processed = info_rate
 
-    for item in flags:
-        r = requests.post(
-            url,
-            data=item.flag,
-            headers=headers,
-        )
+    # Filter by flags which we can submit
+    submit_flags = filter(lambda flag: flags_info[flag][0], flags_info)
+    # Other flags which are expired / invalid
+    other_flags = map(lambda flag: flags_info[flag][1], filter(lambda flag: not flags_info[flag][0], flags_info))
+    # Add extra flags to submit if we don't hae submit_rate valid flags
+    if len(submit_flags) < submit_rate:
+        flags_processed += submit_rate - len(submit_flags)
+        submit_flags += flags[info_rate:flags_processed]
 
-        if r.status_code not in possible_http_codes or r.text.strip() not in dir(ChecksystemResult):
-            yield SubmitResult(item.flag, FlagStatus.QUEUED, 'could not submit flag')
-            continue
-        code = ChecksystemResult[r.text.rstrip()]
-
-        for status, possible_codes in RESPONSES.items():
-            if code in possible_codes:
-                yield SubmitResult(item.flag, status, RESPONSES[status][code])
+    for s in api.submit_flags(*submit_flags[:submit_rate]) + other_flags + \
+            map(
+                lambda f: SubmitResult(f, FlagStatus.QUEUED, 'flag submission ratelimit'),
+                submit_flags[submit_rate:] + flags[flags_processed:]
+            ):
+        yield s

@@ -17,3 +17,8 @@ urllib3==1.26.6
 Werkzeug==2.0.1
 zope.event==4.5.0
 zope.interface==5.4.0
+python-dateutil>=2.8.2
+grequests>=0.6.0
+pycparser==2.20
+cryptography==3.4.8
+cffi==1.14.6
