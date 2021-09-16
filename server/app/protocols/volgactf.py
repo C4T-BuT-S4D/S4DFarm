@@ -98,6 +98,8 @@ class API:
         return map(API.parse_flag_submit_response, flags, responses)
 
 def submit_flags(flags, config):
+    flags = list(map(lambda flag: flag.flag, flags))
+    
     api = API(config['SYSTEM_HOST'])
     info_rate = config['INFO_FLAG_LIMIT']
     submit_rate = config['SUBMIT_FLAG_LIMIT']
