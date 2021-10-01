@@ -1,13 +1,16 @@
 import importlib
 import time
+from collections import defaultdict
 from datetime import datetime
 
+import redis.exceptions
 from flask import request, jsonify, Blueprint
 
 import auth
 import database
 import reloader
 from models import FlagStatus
+from series import rts
 
 api = Blueprint('api', __name__, url_prefix='/api')
 
@@ -34,13 +37,30 @@ def post_flags():
         validator_module = importlib.import_module('validators.' + config['SYSTEM_VALIDATOR'])
         flags = validator_module.validate_flags(flags, config)
 
-    rows = [(item['flag'], item['sploit'], item['team'], cur_time, FlagStatus.QUEUED.name)
-            for item in flags]
+    rows = [
+        (flag['flag'], flag['sploit'], flag['team'], cur_time, FlagStatus.QUEUED.name)
+        for flag in flags
+    ]
 
     db = database.get()
     db.executemany("INSERT OR IGNORE INTO flags (flag, sploit, team, time, status) "
                    "VALUES (?, ?, ?, ?, ?)", rows)
     db.commit()
+
+    grouped = defaultdict(int)
+    labels = {}
+    for flag in flags:
+        sploit, team = flag['sploit'], flag['team']
+        name = f'flag:{sploit}:{team}'
+        grouped[name] += 1
+        labels[name] = {'sploit': sploit, 'team': team, 'type': 'attack'}
+
+    for name, v in grouped.items():
+        try:
+            rts.create(name, labels=labels[name], duplicate_policy='sum')
+        except redis.exceptions.ResponseError:
+            pass
+        rts.add(name, cur_time, v)
 
     return ''
 
@@ -128,7 +148,7 @@ def get_filter_config():
 @api.route('/teams', methods=['GET'])
 @auth.auth_required
 def get_teams():
-    teams = config['TEAMS']
+    teams = reloader.get_config()['TEAMS']
     response = list(map(
         lambda x: {'name': x[0], 'address': x[1]},
         teams.items(),

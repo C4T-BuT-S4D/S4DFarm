@@ -15,3 +15,5 @@ else:
 DATA_DIR.mkdir(exist_ok=True)
 
 DB_PATH = DATA_DIR / 'flags.sqlite'
+
+REDIS_STORAGE_URL = os.getenv('REDIS_URL', 'redis://redis:6379/1')

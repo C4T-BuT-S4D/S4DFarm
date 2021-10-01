@@ -10,6 +10,7 @@ services:
       - ./server/data:/data
     environment:
       FARM_DATA: /data
+      REDIS_URL: 'redis://redis:6379/1'
     restart: unless-stopped
 
   celery:
@@ -20,7 +21,8 @@ services:
       - ./server/app:/app
       - ./server/data:/data
     environment:
-      FARM_DATA: /data
+      FARM_DATA: '/data'
+      CELERY_BROKER_URL: 'redis://redis:6379/0'
     restart: unless-stopped
 
   front:
@@ -32,6 +34,12 @@ services:
       - "5137:80"
 
   redis:
+    image: redislabs/redistimeseries:latest
+    ports:
+      - "6377:6379"
+    restart: unless-stopped
+
+  external_redis:
     image: redis:6.2.5-alpine
     ports:
       - "6378:6379"

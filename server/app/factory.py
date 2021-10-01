@@ -8,6 +8,7 @@ from flask_cors import CORS
 from api import api
 from database import close_db
 from reloader import get_config
+from stats import stats
 
 
 def create_app():
@@ -21,6 +22,7 @@ def create_app():
         handler.setLevel(logging.DEBUG)
 
     app.register_blueprint(api)
+    app.register_blueprint(stats)
     app.teardown_appcontext(close_db)
 
     CORS(app)
