@@ -37,7 +37,7 @@ def validate_flags(flags, config):
             flag = flag[len('VolgaCTF{'): -len('}')]
 
         try:
-            item['flag'] = decode(key, flag)['flag'];
+            item['flag'] = decode(key, flag)['flag']
             yield item
-        except Exception:
+        except:  # noqa
             continue

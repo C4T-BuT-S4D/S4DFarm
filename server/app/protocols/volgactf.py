@@ -1,10 +1,13 @@
-from enum import Enum
-from typing import Iterable, List, Tuple, Optional
-from models import FlagStatus, SubmitResult
-import dateutil.parser
 import datetime
+from enum import Enum
+from itertools import chain
+
+import dateutil.parser
 import grequests
 import requests
+
+from models import FlagStatus, SubmitResult
+
 
 class ChecksystemResult(Enum):
     SUCCESS = 0  # submitted flag has been accepted
@@ -21,12 +24,14 @@ class ChecksystemResult(Enum):
     ERROR_FLAG_NOT_FOUND = 11  # submitted flag hs not been found
     ERROR_SERVICE_STATE_INVALID = 12  # the attacking team service is not up
 
+
 class GetInfoResult(Enum):
     SUCCESS = 0  # submitted flag has been accepted
     ERROR_UNKNOWN = 1  # generic error
     ERROR_ACCESS_DENIED = 2  # getinfo calls are allowed from a team's subnet
     ERROR_NOT_FOUND = 3  # flag is invalid
     ERROR_RATELIMIT = 4  # rate limit exceeded
+
 
 RESPONSES = {
     FlagStatus.ACCEPTED: {
@@ -50,6 +55,7 @@ RESPONSES = {
     }
 }
 
+
 class API:
     def __init__(self, host, version='v1'):
         self.api = f'https://{host}/api/flag/{version}'
@@ -67,12 +73,15 @@ class API:
             if API.flag_is_fresh(info):
                 return True, None
             return False, SubmitResult(flag, FlagStatus.REJECTED, 'expired')
+
         try:
             respcode = GetInfoResult[response.text]
-        except:
+        except:  # noqa
             respcode = GetInfoResult.ERROR_UNKNOWN
+
         if respcode == GetInfoResult.ERROR_RATELIMIT:
             return False, SubmitResult(flag, FlagStatus.QUEUED, 'flag info ratelimit')
+
         return False, SubmitResult(flag, FlagStatus.QUEUED, f'error response from flag getinfo: {respcode}')
 
     def info_flags(self, *flags: str):
@@ -84,11 +93,13 @@ class API:
     def parse_flag_submit_response(flag: str, response: requests.Response):
         try:
             result_code = ChecksystemResult[response.text]
-        except:
+        except:  # noqa
             result_code = ChecksystemResult.ERROR_UNKNOWN
+
         for status, possible_codes in RESPONSES.items():
             if result_code in possible_codes:
                 return SubmitResult(flag, status, RESPONSES[status][result_code])
+
         return SubmitResult(flag, FlagStatus.QUEUED, f'unknown checksystem code: {result_code}')
 
     def submit_flags(self, *flags: str):
@@ -97,9 +108,10 @@ class API:
         responses = grequests.map(pending)
         return map(API.parse_flag_submit_response, flags, responses)
 
+
 def submit_flags(flags, config):
     flags = list(map(lambda flag: flag.flag, flags))
-    
+
     api = API(config['SYSTEM_HOST'])
     info_rate = config['INFO_FLAG_LIMIT']
     submit_rate = config['SUBMIT_FLAG_LIMIT']
@@ -109,17 +121,26 @@ def submit_flags(flags, config):
     flags_processed = info_rate
 
     # Filter by flags which we can submit
-    submit_flags = filter(lambda flag: flags_info[flag][0], flags_info)
+    to_submit = list(filter(lambda flag: flags_info[flag][0], flags_info))
     # Other flags which are expired / invalid
-    other_flags = map(lambda flag: flags_info[flag][1], filter(lambda flag: not flags_info[flag][0], flags_info))
+    other_flags = map(
+        lambda flag: flags_info[flag][1],
+        filter(lambda flag: not flags_info[flag][0], flags_info)
+    )
     # Add extra flags to submit if we don't hae submit_rate valid flags
-    if len(submit_flags) < submit_rate:
-        flags_processed += submit_rate - len(submit_flags)
-        submit_flags += flags[info_rate:flags_processed]
+    if len(to_submit) < submit_rate:
+        flags_processed += submit_rate - len(to_submit)
+        to_submit += flags[info_rate:flags_processed]
 
-    for s in api.submit_flags(*submit_flags[:submit_rate]) + other_flags + \
-            map(
-                lambda f: SubmitResult(f, FlagStatus.QUEUED, 'flag submission ratelimit'),
-                submit_flags[submit_rate:] + flags[flags_processed:]
-            ):
-        yield s
+    queued = map(
+        lambda f: SubmitResult(f, FlagStatus.QUEUED, 'flag submission ratelimit'),
+        to_submit[submit_rate:] + flags[flags_processed:]
+    )
+
+    results = chain(
+        api.submit_flags(*to_submit[:submit_rate]),
+        other_flags,
+        queued,
+    )
+    for res in results:
+        yield res
