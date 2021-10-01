@@ -8,7 +8,8 @@ if (process.env.NODE_ENV === "development") {
 
 const serverUrl = url;
 const apiUrl = `${serverUrl}/api`;
+const statsUrl = `${serverUrl}/stats`;
 
 const flagsPerPage = 30;
 
-export { serverUrl, apiUrl, flagsPerPage };
+export { serverUrl, apiUrl, statsUrl, flagsPerPage };

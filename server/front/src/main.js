@@ -7,6 +7,7 @@ import quasarUserOptions from "./quasar-user-options";
 import BaseLayout from "@/layouts/BaseLayout";
 import axios from "axios";
 import { apiUrl } from "@/config";
+import { Chart, registerables } from "chart.js";
 
 axios.defaults.baseURL = apiUrl;
 
@@ -35,6 +36,8 @@ axios.interceptors.response.use(
   }
 );
 
+Chart.register(...registerables);
+
 const app = createApp(App);
 
 app.use(Quasar, quasarUserOptions);
@@ -43,7 +46,6 @@ app.use(router);
 
 app.component("base-layout", BaseLayout);
 
-store.$http = axios;
 app.config.globalProperties.$http = axios;
 
 app.mount("#app");

@@ -20,7 +20,7 @@ import { mapActions } from "vuex";
 import { flagsPerPage } from "@/config";
 export default {
   components: { FlagsForm, FlagsSubmit, FlagsTable },
-  methods: mapActions(["fetchFilterOptions"]),
+  methods: mapActions(["fetchFlags"]),
   created: async function () {
     await this.fetchFlags({ page: 1, pageSize: flagsPerPage });
   },

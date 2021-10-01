@@ -3,6 +3,8 @@ import Flag from "@/models/flag.js";
 import Team from "@/models/team.js";
 import { flagsPerPage } from "@/config";
 import createPersistedState from "vuex-persistedstate";
+import APIService from "@/services/api";
+import StatsService from "@/services/stats";
 
 export default createStore({
   plugins: [createPersistedState({ paths: ["serverPassword"] })],
@@ -23,6 +25,9 @@ export default createStore({
     teams: [],
 
     serverPassword: null,
+
+    stats: [],
+    statsFilters: null,
   },
   mutations: {
     setTotalFlags(state, totalFlags) {
@@ -57,6 +62,13 @@ export default createStore({
     setServerPassword(state, password) {
       state.serverPassword = password;
     },
+
+    setStats(state, stats) {
+      state.stats = stats;
+    },
+    setStatsFilters(state, statsFilters) {
+      state.statsFilters = statsFilters;
+    },
   },
   actions: {
     fetchFlags: async function (context) {
@@ -69,9 +81,7 @@ export default createStore({
         params = { ...params, ...filters };
       }
       try {
-        const { data } = await this.$http.get("/filter_flags", {
-          params: params,
-        });
+        const { data } = await APIService.get("/filter_flags", { params });
 
         const flags = data.flags.map((flag) => new Flag(flag));
         context.commit("setFlags", flags);
@@ -90,7 +100,7 @@ export default createStore({
 
     fetchFilterOptions: async function (context) {
       try {
-        const { data } = await this.$http.get("/filter_config");
+        const { data } = await APIService.get("/filter_config");
         context.commit("setFilterOptions", data.filters);
         context.commit("setFlagFormat", data.flag_format);
         context.commit("setServerTZ", data.server_tz);
@@ -101,11 +111,21 @@ export default createStore({
 
     fetchTeams: async function (context) {
       try {
-        const { data } = await this.$http.get("/teams");
+        const { data } = await APIService.get("/teams");
         const teams = data.map((team) => new Team(team));
         context.commit("setTeams", teams);
       } catch (e) {
         console.error("Error fetching teams", e);
+      }
+    },
+
+    fetchStats: async function (context) {
+      try {
+        const params = context.state.statsFilters ?? {};
+        const { data } = await StatsService.get("/attacks", { params });
+        context.commit("setStats", data);
+      } catch (e) {
+        console.error("Error fetching stats", e);
       }
     },
   },
