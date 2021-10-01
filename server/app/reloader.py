@@ -1,14 +1,16 @@
 import importlib
+import logging
 import threading
 from typing import Optional
 
 import config
 from constants import CONFIG_PATH
 
+logger = logging.getLogger(__name__)
+
 
 class ConfigReloader:
-    def __init__(self, app):
-        self.app = app
+    def __init__(self):
         self.lock = threading.Lock()
         self.config = config.CONFIG
         self.updated_at = None
@@ -25,11 +27,9 @@ class ConfigReloader:
                     try:
                         importlib.reload(config)
                         self.config = config.CONFIG
-                        with self.app.app_context():
-                            self.app.logger.info('New config loaded')
+                        logger.info('New config loaded')
                     except Exception as e:
-                        with self.app.app_context():
-                            self.app.logger.error('Failed to reload config: %s', e)
+                        logger.error('Failed to reload config: %s', e)
 
                     self.updated_at = cur_mtime
 
@@ -38,11 +38,11 @@ _reloader_lock = threading.Lock()
 _reloader: Optional[ConfigReloader] = None
 
 
-def get_config(app=None):
+def get_config():
     global _reloader
     with _reloader_lock:
         if _reloader is None:
-            assert app is not None, 'Reloader is not initialized, but app=None'
-            _reloader = ConfigReloader(app)
-            app.logger.info('Created reloader instance')
+            logger.info('Creating a new reloader')
+            _reloader = ConfigReloader()
+            logger.info('Created reloader instance')
     return _reloader.get_config()

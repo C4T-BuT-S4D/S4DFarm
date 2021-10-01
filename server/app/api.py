@@ -128,7 +128,6 @@ def get_filter_config():
 @api.route('/teams', methods=['GET'])
 @auth.auth_required
 def get_teams():
-    config = reloader.get_config()
     teams = config['TEAMS']
     response = list(map(
         lambda x: {'name': x[0], 'address': x[1]},

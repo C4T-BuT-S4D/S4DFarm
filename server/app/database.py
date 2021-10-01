@@ -2,19 +2,22 @@
 Module with SQLite helpers, see http://flask.pocoo.org/docs/0.12/patterns/sqlite3/
 """
 
+import logging
 import sqlite3
 import threading
 
-from flask import g, current_app
+from flask import g
 
 from constants import DB_PATH, SCHEMA_PATH
 
 _init_started = False
 _init_lock = threading.RLock()
 
+logger = logging.getLogger(__name__)
+
 
 def _init(database):
-    current_app.logger.info('Creating database schema at %s', DB_PATH)
+    logger.info('Creating database schema at %s', DB_PATH)
     database.executescript(SCHEMA_PATH.read_text())
 
 

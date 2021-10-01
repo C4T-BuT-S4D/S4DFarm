@@ -9,7 +9,18 @@ services:
       - ./server/app:/app
       - ./server/data:/data
     environment:
-      - FARM_DATA=/data
+      FARM_DATA: /data
+    restart: unless-stopped
+
+  celery:
+    build:
+      context: ./server
+      dockerfile: ./docker/celery/Dockerfile
+    volumes:
+      - ./server/app:/app
+      - ./server/data:/data
+    environment:
+      FARM_DATA: /data
     restart: unless-stopped
 
   front:
@@ -20,8 +31,8 @@ services:
     ports:
       - "5137:80"
 
-  farm_redis:
-    image: redis:alpine
+  redis:
+    image: redis:6.2.5-alpine
     ports:
       - "6378:6379"
     restart: unless-stopped
