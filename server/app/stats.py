@@ -21,11 +21,11 @@ def get_attack_series():
 
     start_ts = 0
     if start := request.args.get('start'):
-        start_ts = round(datetime.strptime(start, '%Y-%m-%d %H:%M').timestamp())
+        start_ts = int(round(datetime.strptime(start, '%Y-%m-%d %H:%M').timestamp()))
 
     end_ts = -1
     if end := request.args.get('end'):
-        end_ts = round(datetime.strptime(end, '%Y-%m-%d %H:%M').timestamp())
+        end_ts = int(round(datetime.strptime(end, '%Y-%m-%d %H:%M').timestamp()))
 
     logger.info('Got filters: %s, start_ts=%s, end_ts=%s', filters, start_ts, end_ts)
 

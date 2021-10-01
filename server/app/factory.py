@@ -39,7 +39,7 @@ def create_celery():
     )
     period = get_config()['SUBMIT_PERIOD']
     celery.conf.beat_schedule = {
-        f'add-every-{period}-seconds': {
+        f'submit_flags': {
             'task': 'tasks.submit_flags_task',
             'schedule': period,
         },

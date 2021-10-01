@@ -28,6 +28,7 @@
 
 <script>
 import { mapState, mapActions, mapMutations } from "vuex";
+import APIService from "@/services/api";
 
 export default {
   data: function () {
@@ -42,7 +43,7 @@ export default {
         return { flag: flag[0], team: "*", sploit: "Manual" };
       });
       try {
-        await this.$http.post("/post_flags", flags);
+        await APIService.post("/post_flags", flags);
         const newFilters = { sploit: "Manual" };
         this.setFlagFilters(newFilters);
         await this.updatePage(1);

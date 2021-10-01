@@ -38,9 +38,15 @@ services:
     ports:
       - "6377:6379"
     restart: unless-stopped
+    command: [ "redis-server", "--appendonly", "yes", "--loadmodule", "/usr/lib/redis/modules/redistimeseries.so" ]
+    volumes:
+      - ./server/data/redis:/data
 
   external_redis:
     image: redis:6.2.5-alpine
     ports:
       - "6378:6379"
     restart: unless-stopped
+    command: [ "redis-server", "--appendonly", "yes" ]
+    volumes:
+      - ./server/data/external_redis:/data
