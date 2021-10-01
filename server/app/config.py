@@ -42,4 +42,7 @@ CONFIG = {
     # before sending it to farm clients.
     # ########## DO NOT FORGET TO CHANGE IT ##########
     'SERVER_PASSWORD': '1234',
+
+    # For all time-related operations
+    'TIMEZONE': 'Europe/Moscow',
 }

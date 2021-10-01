@@ -4,6 +4,7 @@ from itertools import chain
 
 import dateutil.parser
 import grequests
+import pytz
 import requests
 
 from models import FlagStatus, SubmitResult
@@ -57,20 +58,20 @@ RESPONSES = {
 
 
 class API:
-    def __init__(self, host, version='v1'):
-        self.api = f'https://{host}/api/flag/{version}'
+    def __init__(self, host: str, timezone: str, version='v1'):
+        self.api_base = f'https://{host}/api/flag/{version}'
+        self.timezone = pytz.timezone(timezone)
 
-    @staticmethod
-    def flag_is_fresh(info, until_seconds=2):
+    def flag_is_fresh(self, info, until_seconds=2):
         expiry = dateutil.parser.parse(info['exp'])
         until = datetime.datetime.now() + datetime.timedelta(seconds=until_seconds)
+        until = self.timezone.localize(until)
         return expiry >= until
 
-    @staticmethod
-    def parse_flag_info_response(flag: str, response: requests.Response):
+    def parse_flag_info_response(self, flag: str, response: requests.Response):
         if response.status_code == 200:
             info = response.json()
-            if API.flag_is_fresh(info):
+            if self.flag_is_fresh(info):
                 return True, None
             return False, SubmitResult(flag, FlagStatus.REJECTED, 'expired')
 
@@ -85,9 +86,9 @@ class API:
         return False, SubmitResult(flag, FlagStatus.QUEUED, f'error response from flag getinfo: {respcode}')
 
     def info_flags(self, *flags: str):
-        pending = (grequests.get(f'{self.api}/info/{flag}') for flag in flags)
+        pending = (grequests.get(f'{self.api_base}/info/{flag}') for flag in flags)
         responses = grequests.map(pending)
-        return dict(zip(flags, map(API.parse_flag_info_response, flags, responses)))
+        return dict(zip(flags, map(self.parse_flag_info_response, flags, responses)))
 
     @staticmethod
     def parse_flag_submit_response(flag: str, response: requests.Response):
@@ -104,15 +105,15 @@ class API:
 
     def submit_flags(self, *flags: str):
         h = {'Content-Type': 'text/plain'}
-        pending = (grequests.post(f'{self.api}/submit', data=flag, headers=h) for flag in flags)
+        pending = (grequests.post(f'{self.api_base}/submit', data=flag, headers=h) for flag in flags)
         responses = grequests.map(pending)
-        return map(API.parse_flag_submit_response, flags, responses)
+        return map(self.parse_flag_submit_response, flags, responses)
 
 
 def submit_flags(flags, config):
     flags = list(map(lambda flag: flag.flag, flags))
 
-    api = API(config['SYSTEM_HOST'])
+    api = API(host=config['SYSTEM_HOST'], timezone=config['TIMEZONE'])
     info_rate = config['INFO_FLAG_LIMIT']
     submit_rate = config['SUBMIT_FLAG_LIMIT']
 
