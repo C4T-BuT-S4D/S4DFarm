@@ -7,11 +7,13 @@ services:
       dockerfile: ./docker/server/Dockerfile
     volumes:
       - ./server/app:/app
-      - ./server/data:/data
     environment:
-      FARM_DATA: /data
       REDIS_URL: 'redis://redis:6379/1'
+      POSTGRES_DSN: 'host=postgres port=5432 user=farm password=farm dbname=farm'
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   celery:
     build:
@@ -19,11 +21,13 @@ services:
       dockerfile: ./docker/celery/Dockerfile
     volumes:
       - ./server/app:/app
-      - ./server/data:/data
     environment:
-      FARM_DATA: '/data'
       CELERY_BROKER_URL: 'redis://redis:6379/0'
+      POSTGRES_DSN: 'host=postgres port=5432 user=farm password=farm dbname=farm'
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   front:
     build:
@@ -33,14 +37,28 @@ services:
     ports:
       - "5137:80"
 
+  postgres:
+    image: postgres:14.1-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: farm
+      POSTGRES_PASSWORD: farm
+      POSTGRES_DB: farm
+    volumes:
+      - ./vol/db:/var/lib/postgresql/data
+    healthcheck:
+      test: pg_isready -U farm -d farm
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
   redis:
     image: redislabs/redistimeseries:latest
-    ports:
-      - "6377:6379"
     restart: unless-stopped
     command: [ "redis-server", "--appendonly", "yes", "--loadmodule", "/usr/lib/redis/modules/redistimeseries.so" ]
     volumes:
-      - ./server/data/redis:/data
+      - ./vol/redis:/data
 
   external_redis:
     image: redis:6.2.5-alpine
@@ -49,4 +67,4 @@ services:
     restart: unless-stopped
     command: [ "redis-server", "--appendonly", "yes" ]
     volumes:
-      - ./server/data/external_redis:/data
+      - ./vol/external_redis:/data

@@ -7,8 +7,8 @@ import redis.exceptions
 from flask import request, jsonify, Blueprint
 
 import auth
-import database
 import reloader
+from database import db_cursor
 from models import FlagStatus
 from series import rts
 
@@ -38,14 +38,26 @@ def post_flags():
         flags = validator_module.validate_flags(flags, config)
 
     rows = [
-        (flag['flag'], flag['sploit'], flag['team'], cur_time, FlagStatus.QUEUED.name)
+        {
+            'flag': flag['flag'],
+            'sploit': flag['sploit'],
+            'team': flag['team'],
+            'time': cur_time,
+            'status': FlagStatus.QUEUED.name,
+        }
         for flag in flags
     ]
 
-    db = database.get()
-    db.executemany("INSERT OR IGNORE INTO flags (flag, sploit, team, time, status) "
-                   "VALUES (?, ?, ?, ?, ?)", rows)
-    db.commit()
+    with db_cursor() as (conn, curs):
+        curs.executemany(
+            """
+            INSERT INTO flags (flag, sploit, team, time, status)
+            VALUES (%(flag)s, %(sploit)s, %(team)s, %(time)s, %(status)s)
+            ON CONFLICT DO NOTHING
+            """,
+            rows,
+        )
+        conn.commit()
 
     grouped = defaultdict(int)
     labels = {}
@@ -74,19 +86,19 @@ def get_filtered_flags():
     for column in ['sploit', 'status', 'team']:
         value = filters.get(column)
         if value:
-            conditions.append(('{} = ?'.format(column), value))
+            conditions.append((f'{column} = %s', value))
 
     for column in ['flag', 'checksystem_response']:
         value = filters.get(column)
         if value:
-            conditions.append(('INSTR(LOWER({}), ?)'.format(column), value.lower()))
+            conditions.append((f'POSITION(%s in LOWER({column})) > 0', value.lower()))
 
-    for column in ['time-since', 'time-until']:
+    for column in ['since', 'until']:
         value = filters.get(column, '').strip()
         if value:
             timestamp = round(datetime.strptime(value, '%Y-%m-%d %H:%M').timestamp())
-            sign = '>=' if column == 'time-since' else '<='
-            conditions.append(('time {} ?'.format(sign), timestamp))
+            sign = '>=' if column == 'since' else '<='
+            conditions.append((f'time {sign} %s', timestamp))
 
     page = int(filters.get('page', 1))
     if page < 1:
@@ -104,13 +116,17 @@ def get_filtered_flags():
         conditions_sql = ''
         conditions_args = []
 
-    sql = 'SELECT * FROM flags ' + conditions_sql + ' ORDER BY time DESC LIMIT ? OFFSET ?'
+    sql = 'SELECT * FROM flags ' + conditions_sql + ' ORDER BY time DESC LIMIT %s OFFSET %s'
     args = conditions_args + [page_size, page_size * (page - 1)]
-    flags = database.query(sql, args)
 
-    sql = 'SELECT COUNT(*) FROM flags ' + conditions_sql
-    args = conditions_args
-    total_count = database.query(sql, args)[0][0]
+    count_sql = 'SELECT COUNT(*) as cnt FROM flags ' + conditions_sql
+    count_args = conditions_args
+
+    with db_cursor(True) as (_, curs):
+        curs.execute(sql, args)
+        flags = curs.fetchall()
+        curs.execute(count_sql, count_args)
+        total_count = curs.fetchone()['cnt']
 
     response = {
         'flags': list(map(dict, flags)),
@@ -126,9 +142,11 @@ def get_filtered_flags():
 @auth.auth_required
 def get_filter_config():
     distinct_values = {}
-    for column in ['sploit', 'status', 'team']:
-        rows = database.query('SELECT DISTINCT {} FROM flags ORDER BY {}'.format(column, column))
-        distinct_values[column] = [item[column] for item in rows]
+    with db_cursor(True) as (_, curs):
+        for column in ['sploit', 'status', 'team']:
+            curs.execute(f'SELECT DISTINCT {column} FROM flags ORDER BY {column}')
+            rows = curs.fetchall()
+            distinct_values[column] = [item[column] for item in rows]
 
     config = reloader.get_config()
 

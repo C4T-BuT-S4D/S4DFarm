@@ -20,11 +20,11 @@ def get_attack_series():
             filters.append(f'{label}={value}')
 
     start_ts = 0
-    if start := request.args.get('start'):
+    if start := request.args.get('since'):
         start_ts = int(round(datetime.strptime(start, '%Y-%m-%d %H:%M').timestamp()))
 
     end_ts = -1
-    if end := request.args.get('end'):
+    if end := request.args.get('until'):
         end_ts = int(round(datetime.strptime(end, '%Y-%m-%d %H:%M').timestamp()))
 
     logger.info('Got filters: %s, start_ts=%s, end_ts=%s', filters, start_ts, end_ts)

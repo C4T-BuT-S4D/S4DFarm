@@ -22,6 +22,7 @@ Jinja2==3.0.1
 kombu==5.1.0
 MarkupSafe==2.0.1
 prompt-toolkit==3.0.20
+psycopg2-binary==2.9.2
 pycparser==2.20
 PyJWT==2.1.0
 python-dateutil==2.8.2

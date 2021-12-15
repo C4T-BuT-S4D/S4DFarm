@@ -12,7 +12,7 @@ restart:
 
 .PHONY: clean
 clean:
-	rm -rf server/data/*
+	rm -rf vol
 
 .PHONY: reset
 reset: stop clean

@@ -6,7 +6,6 @@ from flask import Flask
 from flask_cors import CORS
 
 from api import api
-from database import close_db
 from reloader import get_config
 from stats import stats
 
@@ -23,7 +22,6 @@ def create_app():
 
     app.register_blueprint(api)
     app.register_blueprint(stats)
-    app.teardown_appcontext(close_db)
 
     CORS(app)
 
