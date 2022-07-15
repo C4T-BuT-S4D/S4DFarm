@@ -65,6 +65,12 @@ func (c *cachingHandler) getCacheDuration(r *http.Request) time.Duration {
 	return 0
 }
 
+func (c *cachingHandler) overrideCacheFlag(r *http.Request) bool {
+	defer r.Header.Del("X-CBSProxy-Cache-Override")
+
+	return r.Header.Get("X-CBSProxy-Cache-Override") != ""
+}
+
 func (c *cachingHandler) validateDuration(d time.Duration) time.Duration {
 	if d <= 0 {
 		return d
@@ -90,6 +96,10 @@ func (c *cachingHandler) OnRequest(r *http.Request, ctx *goproxy.ProxyCtx) (*htt
 
 	cachedResponseString, err := c.getFromCache(cacheKey)
 	if err == nil && len(cachedResponseString) > 0 {
+		if c.overrideCacheFlag(r) {
+			return r, nil
+		}
+
 		// Found response in cache. Try to decode.
 		cachedResp, err := http.ReadResponse(bufio.NewReader(strings.NewReader(cachedResponseString)), r)
 		if err != nil {
