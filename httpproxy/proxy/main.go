@@ -16,7 +16,6 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
-const PORT = "8888"
 const RedisDeadline = time.Second * 30
 
 type cachingData struct {
@@ -164,6 +163,6 @@ func main() {
 	proxy.OnRequest().DoFunc(handler.OnRequest)
 	proxy.OnResponse().DoFunc(handler.OnResponse)
 
-	fmt.Printf("Proxy started on: %s\n", PORT)
-	log.Fatal(http.ListenAndServe(":"+PORT, proxy))
+	fmt.Println("Proxy started on port 8888")
+	log.Fatal(http.ListenAndServe(":8888", proxy))
 }
