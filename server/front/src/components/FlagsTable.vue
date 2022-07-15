@@ -10,8 +10,8 @@
     table-header-class="bg-cbs text-cbs"
     dense
   >
-    <template v-slot:top="scope"
-      ><div class="text-h6">{{ scope.pagination.rowsNumber }} flags total</div>
+    <template v-slot:top="scope">
+      <div class="text-h6">{{ scope.pagination.rowsNumber }} flags total</div>
       <q-space />
       <pagination-custom
         :pagesNumber="scope.pagesNumber"
@@ -23,14 +23,18 @@
         @firstPage="scope.firstPage"
         @prevPage="scope.prevPage"
         @nextPage="scope.nextPage"
-        @lastPage="scope.lastPage" /><q-btn
+        @lastPage="scope.lastPage"
+      />
+      <q-btn
         flat
         round
         dense
         :icon="scope.inFullscreen ? 'fullscreen_exit' : 'fullscreen'"
         @click="scope.toggleFullscreen"
-        class="q-ml-md" /></template
-    ><template v-slot:no-data="{ message }">
+        class="q-ml-md"
+      />
+    </template>
+    <template v-slot:no-data="{ message }">
       <div class="full-width row flex-center text-accent q-gutter-sm">
         <q-icon size="2em" name="sentiment_dissatisfied" />
         <span> Well this is sad... {{ message }} </span>
@@ -40,6 +44,21 @@
       <q-th :props="props" :style="{ textAlign: 'center' }">
         {{ props.col.label }}
       </q-th>
+    </template>
+    <template v-slot:body-cell="props">
+      <q-td :props="props">
+        <div>
+          {{ props.value }}
+          <q-btn
+            size="sm"
+            flat
+            round
+            icon="content_copy"
+            v-if="copyableColumns.includes(props.col.name)"
+            @click="copyToClipboard(props.value)"
+          />
+        </div>
+      </q-td>
     </template>
     <template v-slot:pagination="scope">
       <pagination-custom
@@ -58,6 +77,7 @@
 
 <script>
 import { mapState, mapActions } from "vuex";
+import { copyToClipboard } from "quasar";
 import moment from "moment";
 import { flagsPerPage } from "@/config";
 import PaginationCustom from "@/components/PaginationCustom.vue";
@@ -82,9 +102,10 @@ export default {
           name: "checksystemResponse",
           label: "Checksystem response",
           field: "checksystemResponse",
-          align: "center",
+          align: "left",
         },
       ],
+      copyableColumns: ["sploit", "flag", "checksystemResponse"],
       flagsPerPage,
     };
   },
@@ -109,6 +130,7 @@ export default {
     onRequest: async function (props) {
       this.pagination = props.pagination;
     },
+    copyToClipboard,
 
     ...mapActions(["updatePage"]),
   },

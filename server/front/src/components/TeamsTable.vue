@@ -25,7 +25,13 @@
       <q-td :props="props">
         <div>
           {{ props.value }}
-          <q-btn size="sm" flat round icon="content_copy" />
+          <q-btn
+            size="sm"
+            flat
+            round
+            icon="content_copy"
+            @click="copyToClipboard(props.value)"
+          />
         </div>
       </q-td>
     </template>
