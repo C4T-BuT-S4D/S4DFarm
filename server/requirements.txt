@@ -11,7 +11,7 @@ click-repl==0.2.0
 cryptography==3.4.8
 Flask==2.0.1
 Flask-Cors==3.0.10
-gevent==21.1.2
+gevent==21.12.0
 greenlet==1.1.0
 grequests==0.6.0
 gunicorn==20.1.0
@@ -22,7 +22,7 @@ Jinja2==3.0.1
 kombu==5.1.0
 MarkupSafe==2.0.1
 prompt-toolkit==3.0.20
-psycopg2-binary==2.9.2
+psycopg2-binary==2.9.6
 pycparser==2.20
 PyJWT==2.1.0
 python-dateutil==2.8.2

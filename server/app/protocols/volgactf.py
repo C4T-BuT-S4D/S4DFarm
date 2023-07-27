@@ -9,6 +9,8 @@ import requests
 
 from models import FlagStatus, SubmitResult
 
+logger = logging.getLogger(__name__)
+
 
 class ChecksystemResult(Enum):
     SUCCESS = 0  # submitted flag has been accepted

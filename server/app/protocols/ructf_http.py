@@ -1,7 +1,9 @@
 import requests
-from flask import current_app as app
+import logging
 
 from models import FlagStatus, SubmitResult
+
+logger = logging.getLogger(__name__)
 
 RESPONSES = {
     FlagStatus.QUEUED: ['timeout', 'game not started', 'try again later', 'game over', 'is not up',
@@ -40,6 +42,6 @@ def submit_flags(flags, config):
             found_status = FlagStatus.QUEUED
             if response not in unknown_responses:
                 unknown_responses.add(response)
-                app.logger.warning('Unknown checksystem response (flag will be resent): %s', response)
+                logger.warning('Unknown checksystem response (flag will be resent): %s', response)
 
         yield SubmitResult(item['flag'], found_status, response)

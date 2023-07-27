@@ -19,13 +19,13 @@ def get_attack_series():
         if value := request.args.get(label):
             filters.append(f'{label}={value}')
 
-    start_ts = 0
+    start_ts = '-'
     if start := request.args.get('since'):
-        start_ts = int(round(datetime.strptime(start, '%Y-%m-%d %H:%M').timestamp()))
+        start_ts = str(int(round(datetime.strptime(start, '%Y-%m-%d %H:%M').timestamp())))
 
-    end_ts = -1
+    end_ts = '+'
     if end := request.args.get('until'):
-        end_ts = int(round(datetime.strptime(end, '%Y-%m-%d %H:%M').timestamp()))
+        end_ts = str(int(round(datetime.strptime(end, '%Y-%m-%d %H:%M').timestamp())))
 
     logger.info('Got filters: %s, start_ts=%s, end_ts=%s', filters, start_ts, end_ts)
 
@@ -34,7 +34,7 @@ def get_attack_series():
         end_ts,
         filters=filters,
         aggregation_type='sum',
-        bucket_size_msec=60,
+        bucket_size_msec=1000,
         with_labels=True,
     )
     response = []

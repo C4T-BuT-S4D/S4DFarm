@@ -3,12 +3,11 @@ import os
 # import validators.volgactf
 
 CONFIG = {
-    # Don't forget to remove the old database (flags.sqlite) before each competition.
     'DEBUG': os.getenv('DEBUG') == '1',
 
     'TEAMS': {
         f'Team #{i}': f'10.60.{i}.3'
-        for i in range(0, 100)
+        for i in range(0, 10)
     },
     # 'FLAG_FORMAT': r'CTF\.Moscow\{[a-zA-Z\.0-9_-]+\}',
     # 'FLAG_FORMAT': r'VolgaCTF{[\w-]*\.[\w-]*\.[\w-]*}',

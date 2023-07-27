@@ -54,17 +54,17 @@ services:
       start_period: 30s
 
   redis:
-    image: redislabs/redistimeseries:latest
+    image: redislabs/redistimeseries:1.10.4
     restart: unless-stopped
     command: [ "redis-server", "--appendonly", "yes", "--loadmodule", "/usr/lib/redis/modules/redistimeseries.so" ]
     volumes:
       - ./vol/redis:/data
 
   external_redis:
-    image: redis:6.2.5-alpine
+    image: redis:7.0.12-alpine
     ports:
       - "6378:6379"
     restart: unless-stopped
-    command: [ "redis-server", "--appendonly", "yes" ]
+    command: [ "redis-server", "--appendonly", "yes", "--requirepass", "changeme" ]
     volumes:
       - ./vol/external_redis:/data

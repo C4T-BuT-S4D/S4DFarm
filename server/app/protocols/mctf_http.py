@@ -1,8 +1,10 @@
 import json
-
+import logging
 import requests
 
 from models import FlagStatus, SubmitResult
+
+logger = logging.getLogger(__name__)
 
 RESPONSES = {
     FlagStatus.QUEUED: ['timeout', 'game not started', 'try again later', 'game over', 'is not up',
@@ -24,10 +26,7 @@ TIMEOUT = 5
 
 def submit_flags(flags, config):
     for flag in flags:
-        print(flag)
-        r = requests.post(config['SYSTEM_URL'], json={"flag": flag.flag}, timeout=TIMEOUT).text
-        print(r)
-        r = json.loads(r)
+        r = requests.post(config['SYSTEM_URL'], json={"flag": flag.flag}, timeout=TIMEOUT).json()
         if r["success"]:
             yield SubmitResult(flag.flag, FlagStatus.ACCEPTED, "horosh")
         else:
