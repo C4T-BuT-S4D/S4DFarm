@@ -5,6 +5,7 @@ from datetime import datetime
 
 import redis.exceptions
 from flask import request, jsonify, Blueprint
+from prometheus_client import Counter, Gauge
 
 import auth
 import reloader
@@ -13,6 +14,15 @@ from models import FlagStatus
 from series import rts
 
 api = Blueprint('api', __name__, url_prefix='/api')
+
+FLAGS_RECEIVED = Counter(
+    'flags_received',
+    'Number of flags received',
+    ['sploit', 'team'],
+)
+
+TOTAL_TEAMS = Gauge('total_teams', 'Number of teams')
+TOTAL_TEAMS.set_function(lambda: len(reloader.get_config()['TEAMS']))
 
 
 @api.route('/get_config')
@@ -63,6 +73,9 @@ def post_flags():
     labels = {}
     for flag in flags:
         sploit, team = flag['sploit'], flag['team']
+
+        FLAGS_RECEIVED.labels(sploit=sploit, team=team).inc()
+
         name = f'flag:{sploit}:{team}'
         grouped[name] += 1
         labels[name] = {'sploit': sploit, 'team': team, 'type': 'attack'}

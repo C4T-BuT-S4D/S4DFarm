@@ -4,6 +4,9 @@ import os
 from celery import Celery
 from flask import Flask
 from flask_cors import CORS
+from prometheus_client import make_wsgi_app
+from prometheus_flask_exporter import PrometheusMetrics
+from werkzeug.middleware.dispatcher import DispatcherMiddleware
 
 from api import api
 from reloader import get_config
@@ -11,7 +14,7 @@ from stats import stats
 
 
 def create_app():
-    app = Flask('ad_farm')
+    app = Flask('s4d_farm')
 
     # Trigger singleton init
     app.config.update(get_config())
@@ -24,6 +27,11 @@ def create_app():
     app.register_blueprint(stats)
 
     CORS(app)
+    PrometheusMetrics(app)
+
+    app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {
+        '/api/metrics': make_wsgi_app(),
+    })
 
     return app
 

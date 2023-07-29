@@ -1,5 +1,5 @@
-from collections import namedtuple
 from enum import Enum
+from dataclasses import dataclass
 
 
 class FlagStatus(Enum):
@@ -9,5 +9,18 @@ class FlagStatus(Enum):
     REJECTED = 3
 
 
-Flag = namedtuple('Flag', ['flag', 'sploit', 'team', 'time', 'status', 'checksystem_response'])
-SubmitResult = namedtuple('SubmitResult', ['flag', 'status', 'checksystem_response'])
+@dataclass
+class Flag:
+    flag: str
+    sploit: str
+    team: str
+    time: int
+    status: FlagStatus
+    checksystem_response: str
+
+
+@dataclass
+class SubmitResult:
+    flag: str
+    status: FlagStatus
+    checksystem_response: str
