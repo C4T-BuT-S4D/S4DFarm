@@ -54,9 +54,9 @@ services:
       start_period: 30s
 
   redis:
-    image: redislabs/redistimeseries:1.10.4
+    image: redis:7.0.12-alpine
     restart: unless-stopped
-    command: [ "redis-server", "--appendonly", "yes", "--loadmodule", "/usr/lib/redis/modules/redistimeseries.so" ]
+    command: [ "redis-server", "--appendonly", "yes" ]
     volumes:
       - ./vol/redis:/data
 

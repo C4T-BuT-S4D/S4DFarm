@@ -11,7 +11,6 @@ import auth
 import reloader
 from database import db_cursor
 from models import FlagStatus
-from series import rts
 
 api = Blueprint('api', __name__, url_prefix='/api')
 
@@ -69,23 +68,8 @@ def post_flags():
         )
         conn.commit()
 
-    grouped = defaultdict(int)
-    labels = {}
     for flag in flags:
-        sploit, team = flag['sploit'], flag['team']
-
-        FLAGS_RECEIVED.labels(sploit=sploit, team=team).inc()
-
-        name = f'flag:{sploit}:{team}'
-        grouped[name] += 1
-        labels[name] = {'sploit': sploit, 'team': team, 'type': 'attack'}
-
-    for name, v in grouped.items():
-        try:
-            rts.create(name, labels=labels[name], duplicate_policy='sum')
-        except redis.exceptions.ResponseError:
-            pass
-        rts.add(name, cur_time, v)
+        FLAGS_RECEIVED.labels(sploit=flag['sploit'], team=flag['team']).inc()
 
     return ''
 

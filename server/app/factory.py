@@ -10,7 +10,6 @@ from werkzeug.middleware.dispatcher import DispatcherMiddleware
 
 from api import api
 from reloader import get_config
-from stats import stats
 
 
 def create_app():
@@ -24,7 +23,6 @@ def create_app():
         handler.setLevel(logging.DEBUG)
 
     app.register_blueprint(api)
-    app.register_blueprint(stats)
 
     CORS(app)
     PrometheusMetrics(app)
