@@ -1,10 +1,9 @@
-import { createStore } from "vuex";
+import { flagsPerPage } from "@/config";
 import Flag from "@/models/flag.js";
 import Team from "@/models/team.js";
-import { flagsPerPage } from "@/config";
-import createPersistedState from "vuex-persistedstate";
 import APIService from "@/services/api";
-import StatsService from "@/services/stats";
+import { createStore } from "vuex";
+import createPersistedState from "vuex-persistedstate";
 
 export default createStore({
   plugins: [createPersistedState({ paths: ["serverPassword"] })],
@@ -25,9 +24,6 @@ export default createStore({
     teams: [],
 
     serverPassword: null,
-
-    stats: [],
-    statsFilters: null,
   },
   mutations: {
     setTotalFlags(state, totalFlags) {
@@ -61,13 +57,6 @@ export default createStore({
 
     setServerPassword(state, password) {
       state.serverPassword = password;
-    },
-
-    setStats(state, stats) {
-      state.stats = stats;
-    },
-    setStatsFilters(state, statsFilters) {
-      state.statsFilters = statsFilters;
     },
   },
   actions: {
@@ -116,16 +105,6 @@ export default createStore({
         context.commit("setTeams", teams);
       } catch (e) {
         console.error("Error fetching teams", e);
-      }
-    },
-
-    fetchStats: async function (context) {
-      try {
-        const params = context.state.statsFilters ?? {};
-        const { data } = await StatsService.get("/attacks", { params });
-        context.commit("setStats", data);
-      } catch (e) {
-        console.error("Error fetching stats", e);
       }
     },
   },

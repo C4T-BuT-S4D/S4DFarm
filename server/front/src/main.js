@@ -1,13 +1,11 @@
-import { createApp } from "vue";
 import App from "@/App.vue";
+import BaseLayout from "@/layouts/BaseLayout.vue";
+import quasarUserOptions from "@/quasar-user-options";
 import router from "@/router";
 import store from "@/store";
 import { Quasar } from "quasar";
-import quasarUserOptions from "@/quasar-user-options";
-import BaseLayout from "@/layouts/BaseLayout";
-import { Chart, registerables } from "chart.js";
-
-Chart.register(...registerables);
+import "quasar/dist/quasar.sass";
+import { createApp } from "vue";
 
 const app = createApp(App);
 

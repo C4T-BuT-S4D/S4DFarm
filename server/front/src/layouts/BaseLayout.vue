@@ -9,7 +9,6 @@
         <q-tabs class="bg-cbs text-cbs" shrink>
           <q-route-tab :to="{ name: 'flags' }" label="Flags" />
           <q-route-tab :to="{ name: 'teams' }" label="Teams" />
-          <q-route-tab :to="{ name: 'charts' }" label="Charts" />
         </q-tabs>
         <q-space />
       </q-toolbar>
