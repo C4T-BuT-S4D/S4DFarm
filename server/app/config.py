@@ -40,7 +40,7 @@ CONFIG = {
     # Password for the web interface. This key will be excluded from config
     # before sending it to farm clients.
     # ########## DO NOT FORGET TO CHANGE IT ##########
-    'SERVER_PASSWORD': '1234',
+    'SERVER_PASSWORD': os.getenv('SERVER_PASSWORD') or '1234',
 
     # For all time-related operations
     'TIMEZONE': 'Europe/Moscow',

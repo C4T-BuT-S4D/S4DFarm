@@ -1,5 +1,3 @@
-version: '2.4'
-
 services:
   farm:
     build:
@@ -8,8 +6,9 @@ services:
     volumes:
       - ./server/app:/app
     environment:
-      REDIS_URL: 'redis://redis:6379/1'
+      REDIS_URL: 'redis://redis:6379/0'
       POSTGRES_DSN: 'host=postgres port=5432 user=farm password=farm dbname=farm'
+      SERVER_PASSWORD: ${SERVER_PASSWORD}
     restart: unless-stopped
     depends_on:
       postgres:
@@ -22,7 +21,7 @@ services:
     volumes:
       - ./server/app:/app
     environment:
-      CELERY_BROKER_URL: 'redis://redis:6379/0'
+      CELERY_BROKER_URL: 'redis://redis:6379/1'
       POSTGRES_DSN: 'host=postgres port=5432 user=farm password=farm dbname=farm'
     restart: unless-stopped
     depends_on:
@@ -64,17 +63,17 @@ services:
       - redis
 
   redis:
-    image: redis:7.0.12-alpine
+    image: redis:7.2.0-alpine
     restart: unless-stopped
-    command: [ "redis-server", "--appendonly", "yes" ]
+    command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - ./vol/redis:/data
 
   external_redis:
-    image: redis:7.0.12-alpine
+    image: redis:7.2.0-alpine
     ports:
       - "6378:6379"
     restart: unless-stopped
-    command: [ "redis-server", "--appendonly", "yes", "--requirepass", "changeme" ]
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${EXTERNAL_REDIS_PASSWORD:-changeme}"]
     volumes:
       - ./vol/external_redis:/data

@@ -1,14 +1,14 @@
 .PHONY: start
 start:
-	docker-compose up --build -d
+	docker compose up --build -d
 
 .PHONY: stop
 stop:
-	docker-compose down -v
+	docker compose down -v
 
 .PHONY: restart
 restart:
-	docker-compose restart
+	docker compose restart
 
 .PHONY: clean
 clean:
@@ -19,4 +19,4 @@ reset: stop clean
 
 .PHONY: logs
 logs:
-	docker-compose logs -f
+	docker compose logs -f
