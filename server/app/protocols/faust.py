@@ -1,5 +1,6 @@
 import socket
 import logging
+import time
 
 from models import FlagStatus, SubmitResult
 
@@ -52,23 +53,34 @@ def submit_flags(flags, config):
         raise Exception('Checksystem does not greet us: {}'.format(greeting))
 
     unknown_responses = set()
-    for item in flags:
-        sock.sendall(item.flag.encode() + b'\n')
+    sock.sendall(b'\n'.join(item.flag.encode() for item in flags) + b'\n')
+
+    while len(flags) > 0:
         response = recvall(sock).decode().strip()
-        if response:
-            response = response.splitlines()[0]
-        response = response.replace('{} '.format(item.flag), '')
+        if not response:
+            break
 
-        for status, substrings in RESPONSES.items():
-            if any(s in response for s in substrings):
-                found_status = status
-                break
-        else:
-            found_status = FlagStatus.QUEUED
-            if response not in unknown_responses:
-                unknown_responses.add(response)
-                logger.warning('Unknown checksystem response (flag will be resent): %s', response)
+        response = response.splitlines()
+        for line in response:
+            flag = flags[0]
+            line = line.replace(f'{flag.flag} ', '')
 
-        yield SubmitResult(item.flag, found_status, response)
+            for status, substrings in RESPONSES.items():
+                if any(s in line for s in substrings):
+                    found_status = status
+                    break
+            else:
+                found_status = FlagStatus.QUEUED
+                if line not in unknown_responses:
+                    unknown_responses.add(line)
+                    logger.warning('Unknown checksystem response (flag will be resent): %s', line)
+
+            if found_status == FlagStatus.QUEUED and time.time() - flag.time > 10:
+                found_status = FlagStatus.REJECTED
+                line = f'was response {line}, but inv flag too old'
+
+            yield SubmitResult(flag.flag, found_status, line)
+
+            flags = flags[1:]
 
     sock.close()

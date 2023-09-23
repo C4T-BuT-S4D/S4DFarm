@@ -3,9 +3,9 @@ from enum import Enum
 from itertools import chain
 
 import dateutil.parser
-import grequests
 import pytz
 import requests
+import logging
 
 from models import FlagStatus, SubmitResult
 
@@ -88,8 +88,7 @@ class API:
         return False, SubmitResult(flag, FlagStatus.QUEUED, f'error response from flag getinfo: {respcode}')
 
     def info_flags(self, *flags: str):
-        pending = (grequests.get(f'{self.api_base}/info/{flag}') for flag in flags)
-        responses = grequests.map(pending)
+        responses = list(map(lambda flag: requests.get(f'{self.api_base}/info/{flag}'), flags))
         return dict(zip(flags, map(self.parse_flag_info_response, flags, responses)))
 
     @staticmethod
@@ -107,8 +106,7 @@ class API:
 
     def submit_flags(self, *flags: str):
         h = {'Content-Type': 'text/plain'}
-        pending = (grequests.post(f'{self.api_base}/submit', data=flag, headers=h) for flag in flags)
-        responses = grequests.map(pending)
+        responses = [requests.post(f'{self.api_base}/submit', data=flag, headers=h) for flag in flags]
         return map(self.parse_flag_submit_response, flags, responses)
 
 

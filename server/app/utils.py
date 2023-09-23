@@ -1,6 +1,7 @@
 import importlib
 import logging
 import random
+import traceback
 from typing import List, TypeVar
 
 from models import Flag, FlagStatus, SubmitResult
@@ -51,5 +52,5 @@ def submit_flags(flags: List[Flag], config) -> List[SubmitResult]:
         return list(module.submit_flags(flags, config))
     except Exception as e:
         message = '{}: {}'.format(type(e).__name__, str(e))
-        logger.error('Exception in submit protocol: %s', message)
+        logger.error('Exception in submit protocol: %s\n%s', message, traceback.format_exc())
         return [SubmitResult(item.flag, FlagStatus.QUEUED, message) for item in flags]
