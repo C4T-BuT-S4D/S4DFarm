@@ -7,11 +7,13 @@ import (
 	"crypto/subtle"
 	"io"
 	"log"
+	"math/rand"
 	"net/http"
 	"net/http/httputil"
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/elazarl/goproxy"
@@ -23,6 +25,7 @@ const (
 	envAuthKey          = "AUTH_KEY"
 	listenAddr          = ":8888"
 	redisDeadline       = time.Second * 30
+	readLockInterval    = time.Millisecond * 25
 	maxCacheDuration    = time.Minute * 5
 	headerAuthKey       = "X-CBSProxy-Auth-Key"
 	headerCacheDuration = "X-CBSProxy-Cache-Duration"
@@ -36,24 +39,68 @@ type cachingData struct {
 	alreadyCached bool
 }
 
+type cachingContext struct {
+	context.Context
+	key       string
+	keyUnlock func()
+}
+
 type cachingHandler struct {
-	rc      *redis.Client
-	authKey string
+	redis *redis.Client
+	proxy *goproxy.ProxyHttpServer
+
+	mu       sync.Mutex
+	keylocks map[string]*sync.RWMutex
+	authKey  string
 }
 
 func (c *cachingHandler) getFromCache(ctx context.Context, key string) (string, error) {
+	rUnlock := c.rLockKey(key)
+	defer rUnlock()
+
 	ctx, cancel := context.WithTimeout(ctx, redisDeadline)
 	defer cancel()
 
-	return c.rc.Get(ctx, key).Result()
+	return c.redis.Get(ctx, key).Result()
 }
 
 func (c *cachingHandler) storeInCache(ctx context.Context, key string, value []byte, d time.Duration) error {
 	ctx, cancel := context.WithTimeout(ctx, redisDeadline)
 	defer cancel()
 
-	_, err := c.rc.SetNX(ctx, key, value, d).Result()
+	_, err := c.redis.SetNX(ctx, key, value, d).Result()
 	return err
+}
+
+func (c *cachingHandler) getKeyLock(key string) *sync.RWMutex {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	keyMu, ok := c.keylocks[key]
+	if !ok {
+		keyMu = new(sync.RWMutex)
+		c.keylocks[key] = keyMu
+	}
+
+	return keyMu
+}
+
+// rLockKey locks a key for reading, blocking if needed.
+func (c *cachingHandler) rLockKey(key string) (unlock func()) {
+	keyMu := c.getKeyLock(key)
+
+	keyMu.RLock()
+	return keyMu.RUnlock
+}
+
+// tryLockKey tries to lock a key for writing without blocking.
+func (c *cachingHandler) tryLockKey(key string) (ok bool, unlock func()) {
+	keyMu := c.getKeyLock(key)
+
+	if keyMu.TryLock() {
+		return true, keyMu.Unlock
+	}
+	return false, nil
 }
 
 func (c *cachingHandler) getCacheDuration(r *http.Request) time.Duration {
@@ -92,6 +139,25 @@ func (c *cachingHandler) validateDuration(d time.Duration) time.Duration {
 	return min(d, maxCacheDuration)
 }
 
+func (c *cachingHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	ctx := &cachingContext{
+		Context:   r.Context(),
+		key:       "",
+		keyUnlock: nil,
+	}
+
+	// proxy.ServeHTTP can fail after OnRequest has locked a key,
+	// in which case that key would stay locked forever without this defer
+	defer func() {
+		if ctx.keyUnlock != nil {
+			log.Printf("unlocking cache lock for %q", ctx.key)
+			ctx.keyUnlock()
+		}
+	}()
+
+	c.proxy.ServeHTTP(w, r.WithContext(ctx))
+}
+
 func (c *cachingHandler) OnRequest(r *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
 	if subtle.ConstantTimeCompare([]byte(r.Header.Get(headerAuthKey)), []byte(c.authKey)) != 1 {
 		return nil, &http.Response{
@@ -111,30 +177,53 @@ func (c *cachingHandler) OnRequest(r *http.Request, ctx *goproxy.ProxyCtx) (*htt
 
 	ctx.UserData = cd
 
+	// Forcefully override cache using response to this request.
 	if c.overrideCacheFlag(r) {
 		return r, nil
 	}
 
-	cachedResponseString, err := c.getFromCache(r.Context(), cd.cacheKey)
-	if err == nil && len(cachedResponseString) > 0 {
-		// Return cached response or proxy the request if the cache contains an invalid entry
-		cachedResp, err := http.ReadResponse(bufio.NewReader(strings.NewReader(cachedResponseString)), r)
-		if err != nil {
-			ctx.Warnf("parsing cached response: %s", err)
-			return r, nil
+	// Loop needed because the cache can be empty, but when we try to acquire a write lock,
+	// someone could've already gotten it first, and we need to wait for them to finish and read the result.
+	for {
+		cachedResponseString, err := c.getFromCache(r.Context(), cd.cacheKey)
+		if err == nil && len(cachedResponseString) > 0 {
+			// Return cached response or proxy the request if the cache contains an invalid entry
+			cachedResp, err := http.ReadResponse(bufio.NewReader(strings.NewReader(cachedResponseString)), r)
+			if err != nil {
+				ctx.Warnf("parsing cached response: %s", err)
+				return r, nil
+			}
+
+			ctx.Logf("returning cached response for %q", cd.cacheKey)
+			cd.alreadyCached = true
+			return nil, cachedResp
 		}
 
-		cd.alreadyCached = true
-		return nil, cachedResp
-	}
+		ok, unlock := c.tryLockKey(cd.cacheKey)
+		if !ok {
+			// sleep for 25±5ms before next iteration
+			time.Sleep(time.Duration(float64(readLockInterval) * (1 + rand.Float64()*0.4 - 0.2)))
+			continue
+		}
 
-	return r, nil
+		// Write lock acquired:
+		// - save the unlock function to be called in the ServeHTTP defer
+		// - proxy the request and then save the response
+		ctx.Logf("cache lock acquired for %q, will proxy request", cd.cacheKey)
+		cachingCtx := r.Context().(*cachingContext)
+		cachingCtx.keyUnlock = unlock
+		cachingCtx.key = cd.cacheKey
+		return r, nil
+	}
 }
 
 func (c *cachingHandler) OnResponse(resp *http.Response, ctx *goproxy.ProxyCtx) *http.Response {
-	// UserData isn't set when request authorization fails.
 	if ctx.UserData == nil {
+		// UserData isn't set when request authorization fails.
 		return resp
+	} else if resp == nil {
+		// resp is nil when an error has occurred
+		return nil
 	}
 
 	cd, ok := ctx.UserData.(*cachingData)
@@ -166,22 +255,22 @@ func main() {
 		log.Fatalf("Failed to parse %s: %s", envRedisURL, err)
 	}
 
-	handler := cachingHandler{
-		rc:      redis.NewClient(redopts),
-		authKey: os.Getenv(envAuthKey),
+	handler := &cachingHandler{
+		redis:    redis.NewClient(redopts),
+		proxy:    goproxy.NewProxyHttpServer(),
+		keylocks: make(map[string]*sync.RWMutex),
+		authKey:  os.Getenv(envAuthKey),
 	}
 
-	proxy := goproxy.NewProxyHttpServer()
-	proxy.Verbose = true
-
-	proxy.OnRequest().HandleConnect(goproxy.AlwaysMitm)
-	proxy.OnRequest().DoFunc(handler.OnRequest)
-	proxy.OnResponse().DoFunc(handler.OnResponse)
+	handler.proxy.Verbose = true
+	handler.proxy.OnRequest().HandleConnect(goproxy.AlwaysMitm)
+	handler.proxy.OnRequest().DoFunc(handler.OnRequest)
+	handler.proxy.OnResponse().DoFunc(handler.OnResponse)
 
 	log.Printf("Proxy started on %s", listenAddr)
 	srv := &http.Server{
 		Addr:         listenAddr,
-		Handler:      proxy,
+		Handler:      handler,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: time.Minute,
 		IdleTimeout:  time.Minute * 2,
