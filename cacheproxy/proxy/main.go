@@ -297,16 +297,14 @@ func main() {
 		authKey:  os.Getenv("AUTH_KEY"),
 	}
 
-	handler.proxy.Verbose = true
-
+	handler.proxy.Verbose = os.Getenv("VERBOSE_LOGS") == "t"
 	handler.proxy.OnRequest().HandleConnect(goproxy.FuncHttpsHandler(handler.HandleConnect))
 	handler.proxy.OnRequest().DoFunc(handler.OnRequest)
 	handler.proxy.OnResponse().DoFunc(handler.OnResponse)
 
 	log.Printf("Proxy started on :8888")
 	srv := &http.Server{
-		Addr: ":8888",
-		// Handler:     http.TimeoutHandler(handler, time.Minute, "timed out"),
+		Addr:        ":8888",
 		Handler:     handler,
 		ReadTimeout: time.Second * 10,
 		IdleTimeout: time.Minute * 2,

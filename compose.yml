@@ -58,6 +58,7 @@ services:
     environment:
       REDIS_URL: "redis://redis:6379/2"
       AUTH_KEY: "${CACHEPROXY_AUTH_KEY:-changeme}"
+      VERBOSE_LOGS: "f"
     ports:
       - "8888:8888"
     depends_on:
