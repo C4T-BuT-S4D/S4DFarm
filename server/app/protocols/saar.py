@@ -50,10 +50,6 @@ def recvall(sock):
 def submit_flags(flags, config):
     sock = socket.create_connection((config['SYSTEM_HOST'], config['SYSTEM_PORT']),
                                     READ_TIMEOUT)
-    greeting = recvall(sock)
-    if b'One flag per line please' not in greeting:
-        raise Exception('Checksystem does not greet us: {}'.format(greeting))
-
     unknown_responses = set()
     sock.sendall(b'\n'.join(item.flag.encode() for item in flags) + b'\n')
 
