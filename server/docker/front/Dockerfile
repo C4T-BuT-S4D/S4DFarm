@@ -1,13 +1,13 @@
 FROM node:20-slim AS front-base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@8.9.0 --activate
 
 COPY front /app
 WORKDIR /app
 
 FROM front-base AS front-build
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install
 RUN pnpm run build
 
 FROM nginx:1.21.0-alpine
