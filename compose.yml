@@ -6,8 +6,8 @@ services:
     volumes:
       - ./server/app:/app
     environment:
-      REDIS_URL: 'redis://redis:6379/0'
-      POSTGRES_DSN: 'host=postgres port=5432 user=farm password=farm dbname=farm'
+      REDIS_URL: "redis://redis:6379/0"
+      POSTGRES_DSN: "host=postgres port=5432 user=farm password=farm dbname=farm"
       SERVER_PASSWORD: ${SERVER_PASSWORD}
     restart: unless-stopped
     depends_on:
@@ -21,8 +21,8 @@ services:
     volumes:
       - ./server/app:/app
     environment:
-      CELERY_BROKER_URL: 'redis://redis:6379/1'
-      POSTGRES_DSN: 'host=postgres port=5432 user=farm password=farm dbname=farm'
+      CELERY_BROKER_URL: "redis://redis:6379/1"
+      POSTGRES_DSN: "host=postgres port=5432 user=farm password=farm dbname=farm"
     restart: unless-stopped
     depends_on:
       postgres:
@@ -53,10 +53,12 @@ services:
       start_period: 30s
 
   cacheproxy:
-    build: httpproxy
+    build: cacheproxy
     restart: unless-stopped
     environment:
-      REDIS_URL: 'redis://redis:6379/2'
+      REDIS_URL: "redis://redis:6379/2"
+      AUTH_KEY: "${CACHEPROXY_AUTH_KEY:-changeme}"
+      VERBOSE_LOGS: "f"
     ports:
       - "8888:8888"
     depends_on:
@@ -74,6 +76,13 @@ services:
     ports:
       - "6378:6379"
     restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${EXTERNAL_REDIS_PASSWORD:-changeme}"]
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--requirepass",
+        "${EXTERNAL_REDIS_PASSWORD:-changeme}",
+      ]
     volumes:
       - ./vol/external_redis:/data
