@@ -159,6 +159,81 @@ def get_filter_config():
 
     return jsonify(response)
 
+@api.route('/summary', methods=['GET'])
+@auth.auth_required
+def summary():
+    filters = request.args
+
+    conditions = []
+    for column in ['sploit', 'status', 'team']:
+        value = filters.get(column)
+        if value:
+            conditions.append((f'{column} = %s', value))
+
+    for column in ['flag', 'checksystem_response']:
+        value = filters.get(column)
+        if value:
+            conditions.append((f'POSITION(%s in LOWER({column})) > 0', value.lower()))
+
+    for column in ['since', 'until']:
+        value = filters.get(column, '').strip()
+        if value:
+            timestamp = round(datetime.strptime(value, '%Y-%m-%d %H:%M').timestamp())
+            sign = '>=' if column == 'since' else '<='
+            conditions.append((f'time {sign} %s', timestamp))
+
+    # result for last x seconds
+    for column in ['last']:
+        value = filters.get(column, '').strip()
+        if value:
+            timestamp = round(datetime.strptime(datetime.timestamp()-value, '%Y-%m-%d %H:%M').timestamp())
+            sign = '>='
+            conditions.append((f'time {sign} %s', timestamp))
+
+    if conditions:
+        chunks, values = list(zip(*conditions))
+        conditions_sql = 'WHERE ' + ' AND '.join(chunks)
+        conditions_args = list(values)
+    else:
+        conditions_sql = ''
+        conditions_args = []
+
+    sql = 'SELECT * FROM flags ' + conditions_sql
+    args = conditions_args
+
+    with db_cursor(True) as (_, curs):
+        curs.execute(sql, args)
+        flags = curs.fetchall()
+
+    result = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
+    response = filters.get('response','')
+    for item in flags:
+        key = item['checksystem_response'][:64] if response else item['status']
+        result[item['sploit']][item['team']][key] += 1
+
+    teams = reloader.get_config()['TEAMS']
+    sploits=[]
+    for sploit in result:
+        tmp={}
+        tmp['sploit_name'] = sploit
+        tmp['teams']=[]
+        for team in teams:
+            if team not in result[sploit]:
+                tmp['teams'].append({
+                    'team': team,
+                    'team_status': 'not status'
+                })
+        for team in result[sploit]:
+            output = ''
+            for key, value in result[sploit][team].items():
+                output += f'{key}: {value}\n'
+            tmp['teams'].append({
+                'team': team,
+                'team_status': output
+            })
+        sploits.append(tmp)
+
+    return jsonify(sploits)
 
 @api.route('/teams', methods=['GET'])
 @auth.auth_required
